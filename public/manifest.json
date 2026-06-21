@@ -1,0 +1,16 @@
+{
+  "name": "tracl",
+  "short_name": "tracl",
+  "description": "Honest study tracking",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F6F3",
+  "theme_color": "#534AB7",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23534AB7'/><text y='.9em' font-size='72' x='50%' text-anchor='middle' fill='white' font-family='system-ui'>t</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

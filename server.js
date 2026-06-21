@@ -9,21 +9,16 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'tracl-dev-secret-change-in-production';
 const DB_PATH = path.join(__dirname, 'tracl.db.json');
 
-// ── DATABASE (file-based JSON — no native binaries, works everywhere) ──
-// Structure: { users: [], sessions: [] }
-
+// ── DATABASE ──
 function loadDB() {
   try {
     if (fs.existsSync(DB_PATH)) return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
   } catch {}
   return { users: [], sessions: [] };
 }
-
 function saveDB(db) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db), 'utf8');
 }
-
-// Simple indexed lookups
 const q = {
   userByEmail: (db, email) => db.users.find(u => u.email === email),
   userById: (db, id) => db.users.find(u => u.id === id),
@@ -31,6 +26,23 @@ const q = {
   openSession: (db, userId) => db.sessions.find(s => s.userId === userId && !s.endedAt),
   sessionById: (db, id, userId) => db.sessions.find(s => s.id === id && s.userId === userId),
 };
+
+// ── SSE: per-user connected clients ──
+const clients = new Map(); // userId -> Set of res objects
+
+function getClients(userId) {
+  if (!clients.has(userId)) clients.set(userId, new Set());
+  return clients.get(userId);
+}
+
+function pushToUser(userId, event, data) {
+  const conns = clients.get(userId);
+  if (!conns) return;
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const res of conns) {
+    try { res.write(msg); } catch {}
+  }
+}
 
 // ── MIDDLEWARE ──
 app.use(express.json());
@@ -67,6 +79,35 @@ function uid() {
 function dayKey(ts) {
   return new Date(ts).toISOString().slice(0, 10);
 }
+
+// ── SSE ENDPOINT ──
+// EventSource can't send headers, so we accept token via query param too
+app.get('/events', (req, res) => {
+  const token = req.headers.authorization?.slice(7) || req.query.token;
+  if (!token) return res.status(401).end();
+  try {
+    const { userId } = jwt.verify(token, JWT_SECRET);
+    req.userId = userId;
+  } catch { return res.status(401).end(); }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  // Send a heartbeat every 25s to keep the connection alive through proxies
+  const heartbeat = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch {}
+  }, 25000);
+
+  const userClients = getClients(req.userId);
+  userClients.add(res);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    userClients.delete(res);
+  });
+});
 
 // ── AUTH ──
 app.post('/auth/signup', (req, res) => {
@@ -129,6 +170,9 @@ app.post('/sessions/start', requireAuth, (req, res) => {
   db.sessions.push(session);
   saveDB(db);
 
+  // Push to all other tabs
+  pushToUser(req.userId, 'session:start', { sessionId: session.id, startedAt: session.startedAt, method: session.method });
+
   res.json({ sessionId: session.id, startedAt: session.startedAt });
 });
 
@@ -145,6 +189,7 @@ app.post('/sessions/end', requireAuth, (req, res) => {
   if (durationSecs < 30) {
     db.sessions = db.sessions.filter(s => s.id !== sessionId);
     saveDB(db);
+    pushToUser(req.userId, 'session:discard', { sessionId });
     return res.json({ discarded: true, reason: 'session too short' });
   }
 
@@ -152,6 +197,9 @@ app.post('/sessions/end', requireAuth, (req, res) => {
   session.durationSecs = durationSecs;
   session.note = note || null;
   saveDB(db);
+
+  // Push session end to all other tabs — they will show the summary
+  pushToUser(req.userId, 'session:end', { sessionId, startedAt: session.startedAt, endedAt: now, durationSecs });
 
   res.json({ sessionId, startedAt: session.startedAt, endedAt: now, durationSecs });
 });
@@ -182,7 +230,6 @@ app.get('/sessions/stats', requireAuth, (req, res) => {
   const db = loadDB();
   const all = q.sessionsByUser(db, req.userId).filter(s => s.endedAt);
 
-  // Streak
   let streak = 0;
   const seen = new Set(all.map(s => dayKey(s.startedAt)));
   for (let i = 0; i < 365; i++) {
