@@ -200,4 +200,4 @@ app.get('/sessions/stats', requireAuth, (req, res) => {
 
 app.get('/health', (req, res) => res.json({ ok: true, time: Date.now() }));
 
-app.listen(PORT, () => console.log(`tracl running on http://localhost:${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`tracl running on port ${PORT}`));
