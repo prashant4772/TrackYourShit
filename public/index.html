@@ -1047,6 +1047,14 @@ async function enterApp(user){
   await handleURLAction();
 }
 
+// When iOS brings the PWA back to foreground via a Shortcut URL, the page
+// doesn't reload — but the URL does change. Re-check on visibility change.
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState==='visible'&&currentUser&&window.location.search){
+    await handleURLAction();
+  }
+});
+
 (async function boot(){
   const tok=getToken();
   if(tok){try{const user=await api('GET','/auth/me');hideLoading();await enterApp(user);return;}catch{clearToken();}}
