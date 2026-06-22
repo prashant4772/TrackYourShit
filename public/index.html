@@ -4,196 +4,279 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>tracl</title>
-
-<!-- PWA -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="tracl">
 <meta name="theme-color" content="#534AB7">
 <link rel="manifest" href="/manifest.json">
-
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #F7F6F3; --surface: #FFFFFF;
+  --border: rgba(0,0,0,0.08); --border-mid: rgba(0,0,0,0.14);
+  --text: #1A1A18; --text-2: #6B6B67; --text-3: #A8A8A3;
+  --purple: #534AB7; --purple-light: #EEEDFE; --purple-mid: #AFA9EC;
+  --green: #3B6D11; --green-light: #EAF3DE; --green-mid: #639922;
+  --red: #C0392B; --red-light: rgba(192,57,43,0.08);
+  --radius: 12px; --radius-sm: 8px; --bnav: 60px;
+}
+@media (prefers-color-scheme: dark) {
   :root {
-    --bg: #F7F6F3;
-    --surface: #FFFFFF;
-    --border: rgba(0,0,0,0.08);
-    --border-mid: rgba(0,0,0,0.14);
-    --text: #1A1A18;
-    --text-2: #6B6B67;
-    --text-3: #A8A8A3;
-    --purple: #534AB7;
-    --purple-light: #EEEDFE;
-    --purple-mid: #AFA9EC;
-    --green: #3B6D11;
-    --green-light: #EAF3DE;
-    --green-mid: #639922;
-    --red: #C0392B;
-    --radius: 12px;
-    --radius-sm: 8px;
+    --bg: #111110; --surface: #1C1C1A;
+    --border: rgba(255,255,255,0.08); --border-mid: rgba(255,255,255,0.14);
+    --text: #F0EFE8; --text-2: #9A9A94; --text-3: #5A5A56;
+    --purple-light: #1E1A3F; --green-light: #0F1F05;
+    --red-light: rgba(192,57,43,0.15);
   }
+}
+html,body { min-height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+.screen { display:none; min-height:100svh; }
+.screen.active { display:flex; flex-direction:column; }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #111110;
-      --surface: #1C1C1A;
-      --border: rgba(255,255,255,0.08);
-      --border-mid: rgba(255,255,255,0.14);
-      --text: #F0EFE8;
-      --text-2: #9A9A94;
-      --text-3: #5A5A56;
-      --purple-light: #1E1A3F;
-      --green-light: #0F1F05;
-    }
-  }
+/* AUTH */
+.auth-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem 1.5rem; max-width:400px; margin:0 auto; width:100%; }
+.auth-logo { font-size:28px; font-weight:600; letter-spacing:-1px; color:var(--purple); margin-bottom:.25rem; }
+.auth-tagline { font-size:13px; color:var(--text-3); margin-bottom:2.5rem; text-align:center; }
+.auth-card { background:var(--surface); border:.5px solid var(--border); border-radius:16px; padding:1.75rem; width:100%; }
+.auth-title { font-size:18px; font-weight:600; margin-bottom:.25rem; letter-spacing:-.3px; }
+.auth-sub { font-size:13px; color:var(--text-2); margin-bottom:1.5rem; }
+.field { margin-bottom:1rem; }
+.field label { display:block; font-size:12px; color:var(--text-2); margin-bottom:5px; font-weight:500; }
+.field input { width:100%; padding:10px 13px; background:var(--bg); border:.5px solid var(--border-mid); border-radius:var(--radius-sm); color:var(--text); font-size:14px; font-family:inherit; outline:none; transition:border-color .15s; }
+.field input:focus { border-color:var(--purple); }
+.field input::placeholder { color:var(--text-3); }
+.field-error { font-size:11px; color:var(--red); margin-top:4px; display:none; }
+.field-error.show { display:block; }
+.api-error { font-size:13px; color:var(--red); margin-bottom:1rem; display:none; padding:8px 12px; background:var(--red-light); border-radius:var(--radius-sm); }
+.api-error.show { display:block; }
+.btn-primary { width:100%; padding:12px; background:var(--purple); color:#fff; border:none; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:opacity .15s; }
+.btn-primary:hover { opacity:.9; }
+.btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+.auth-switch { text-align:center; font-size:13px; color:var(--text-2); margin-top:1.25rem; }
+.auth-switch a { color:var(--purple); cursor:pointer; text-decoration:none; font-weight:500; }
 
-  html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+/* TOP NAV */
+.app-nav { position:sticky; top:0; z-index:10; background:var(--bg); border-bottom:.5px solid var(--border); padding:0 1.25rem; height:52px; display:flex; align-items:center; justify-content:space-between; }
+.nav-logo { font-size:18px; font-weight:600; letter-spacing:-.5px; color:var(--purple); }
+.nav-title { font-size:16px; font-weight:600; letter-spacing:-.3px; }
+.nav-right { display:flex; align-items:center; gap:12px; }
+.nav-avatar { width:30px; height:30px; border-radius:50%; background:var(--purple-light); color:var(--purple); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+.live-pill { display:flex; align-items:center; gap:5px; background:var(--green-light); color:var(--green); font-size:11px; font-weight:500; padding:3px 10px; border-radius:99px; }
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--green-mid); animation:pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
 
-  .screen { display: none; min-height: 100svh; }
-  .screen.active { display: flex; flex-direction: column; }
+/* BOTTOM NAV */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; height:var(--bnav); background:var(--bg); border-top:.5px solid var(--border); display:flex; z-index:10; padding-bottom:env(safe-area-inset-bottom); }
+.bnav-tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; border:none; background:none; font-family:inherit; color:var(--text-3); transition:color .15s; padding:0; }
+.bnav-tab.active { color:var(--purple); }
+.bnav-tab svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.bnav-label { font-size:10px; font-weight:500; }
 
-  /* AUTH */
-  .auth-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem 1.5rem; max-width:400px; margin:0 auto; width:100%; }
-  .auth-logo { font-size:28px; font-weight:600; letter-spacing:-1px; color:var(--purple); margin-bottom:0.25rem; }
-  .auth-tagline { font-size:13px; color:var(--text-3); margin-bottom:2.5rem; text-align:center; }
-  .auth-card { background:var(--surface); border:0.5px solid var(--border); border-radius:16px; padding:1.75rem; width:100%; }
-  .auth-title { font-size:18px; font-weight:600; margin-bottom:0.25rem; letter-spacing:-0.3px; }
-  .auth-sub { font-size:13px; color:var(--text-2); margin-bottom:1.5rem; }
-  .field { margin-bottom:1rem; }
-  .field label { display:block; font-size:12px; color:var(--text-2); margin-bottom:5px; font-weight:500; }
-  .field input { width:100%; padding:10px 13px; background:var(--bg); border:0.5px solid var(--border-mid); border-radius:var(--radius-sm); color:var(--text); font-size:14px; font-family:inherit; outline:none; transition:border-color 0.15s; }
-  .field input:focus { border-color:var(--purple); }
-  .field input::placeholder { color:var(--text-3); }
-  .field-error { font-size:11px; color:var(--red); margin-top:4px; display:none; }
-  .field-error.show { display:block; }
-  .api-error { font-size:13px; color:var(--red); margin-bottom:1rem; display:none; padding:8px 12px; background:rgba(192,57,43,0.08); border-radius:var(--radius-sm); }
-  .api-error.show { display:block; }
-  .btn-primary { width:100%; padding:12px; background:var(--purple); color:#fff; border:none; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:opacity 0.15s; }
-  .btn-primary:hover { opacity:0.9; }
-  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
-  .auth-switch { text-align:center; font-size:13px; color:var(--text-2); margin-top:1.25rem; }
-  .auth-switch a { color:var(--purple); cursor:pointer; text-decoration:none; font-weight:500; }
+/* APP BODY */
+.app-body { flex:1; padding:1.25rem; padding-bottom:calc(var(--bnav) + 1.25rem + env(safe-area-inset-bottom)); max-width:480px; margin:0 auto; width:100%; }
 
-  /* NAV */
-  .app-nav { position:sticky; top:0; z-index:10; background:var(--bg); border-bottom:0.5px solid var(--border); padding:0 1.25rem; height:52px; display:flex; align-items:center; justify-content:space-between; }
-  .nav-logo { font-size:18px; font-weight:600; letter-spacing:-0.5px; color:var(--purple); }
-  .nav-right { display:flex; align-items:center; gap:12px; }
-  .nav-avatar { width:30px; height:30px; border-radius:50%; background:var(--purple-light); color:var(--purple); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
-  .live-pill { display:flex; align-items:center; gap:5px; background:var(--green-light); color:var(--green); font-size:11px; font-weight:500; padding:3px 10px; border-radius:99px; }
-  .live-dot { width:6px; height:6px; border-radius:50%; background:var(--green-mid); animation:pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+/* HERO */
+.hero-block { text-align:center; padding:1.5rem 0 1.25rem; }
+.hero-label { font-size:12px; color:var(--text-3); margin-bottom:6px; letter-spacing:.3px; }
+.hero-time { font-size:60px; font-weight:600; letter-spacing:-3px; line-height:1; color:var(--text); font-variant-numeric:tabular-nums; }
+.hero-time.active { color:var(--purple); }
+.hero-sub { font-size:12px; color:var(--text-3); margin-top:8px; }
+.goal-bar { height:3px; background:var(--border); border-radius:2px; margin:14px 0; overflow:hidden; }
+.goal-fill { height:100%; background:var(--purple); border-radius:2px; transition:width 1s linear; }
 
-  .app-body { flex:1; padding:1.25rem; max-width:480px; margin:0 auto; width:100%; }
+/* START / ACTIVE */
+.start-ring { width:128px; height:128px; border-radius:50%; border:1.5px solid var(--border-mid); display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; cursor:pointer; transition:border-color .2s; }
+.start-ring:hover { border-color:var(--purple); }
+.start-core { width:102px; height:102px; border-radius:50%; background:var(--purple); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; transition:opacity .15s; border:none; font-family:inherit; }
+.start-core:hover { opacity:.9; }
+.start-core svg { width:22px; height:22px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.start-core span { font-size:12px; font-weight:600; color:#fff; }
+.hint-text { text-align:center; font-size:11px; color:var(--text-3); margin-top:8px; }
+.session-timer-block { text-align:center; margin-bottom:1.25rem; }
+.session-timer { font-size:48px; font-weight:600; letter-spacing:-2px; color:var(--purple); font-variant-numeric:tabular-nums; }
+.server-tag { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-3); margin-top:6px; }
+.server-dot { width:5px; height:5px; border-radius:50%; background:var(--green-mid); }
+.end-btn { width:100%; padding:13px; background:transparent; color:var(--text-2); border:.5px solid var(--border-mid); border-radius:var(--radius); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:background .15s; margin-bottom:6px; }
+.end-btn:hover { background:var(--surface); }
+.end-btn:disabled { opacity:.5; cursor:not-allowed; }
 
-  /* HERO */
-  .hero-block { text-align:center; padding:1.5rem 0 1.25rem; }
-  .hero-label { font-size:12px; color:var(--text-3); margin-bottom:6px; letter-spacing:0.3px; }
-  .hero-time { font-size:60px; font-weight:600; letter-spacing:-3px; line-height:1; color:var(--text); font-variant-numeric:tabular-nums; }
-  .hero-time.active { color:var(--purple); }
-  .hero-sub { font-size:12px; color:var(--text-3); margin-top:8px; }
-  .goal-bar { height:3px; background:var(--border); border-radius:2px; margin:14px 0; overflow:hidden; }
-  .goal-fill { height:100%; background:var(--purple); border-radius:2px; transition:width 1s linear; }
+/* CARDS */
+.cards-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:1rem; }
+.cards-row.three { grid-template-columns:1fr 1fr 1fr; }
+.card { background:var(--surface); border:.5px solid var(--border); border-radius:var(--radius); padding:13px 14px; }
+.card-label { font-size:11px; color:var(--text-3); margin-bottom:4px; }
+.card-val { font-size:18px; font-weight:600; color:var(--text); letter-spacing:-.4px; }
+.cards-row.three .card-val { font-size:15px; }
+.card-sub { font-size:11px; color:var(--text-2); margin-top:2px; }
 
-  /* START */
-  .start-ring { width:128px; height:128px; border-radius:50%; border:1.5px solid var(--border-mid); display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; cursor:pointer; transition:border-color 0.2s; }
-  .start-ring:hover { border-color:var(--purple); }
-  .start-core { width:102px; height:102px; border-radius:50%; background:var(--purple); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; transition:opacity 0.15s; border:none; font-family:inherit; }
-  .start-core:hover { opacity:0.9; }
-  .start-core svg { width:22px; height:22px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-  .start-core span { font-size:12px; font-weight:600; color:#fff; }
-  .hint-text { text-align:center; font-size:11px; color:var(--text-3); margin-top:8px; }
+/* WEEK CHART */
+.week-card { background:var(--surface); border:.5px solid var(--border); border-radius:var(--radius); padding:13px 14px; margin-bottom:1rem; }
+.week-bars { display:flex; align-items:flex-end; gap:5px; height:56px; margin-bottom:5px; }
+.wbar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; height:100%; justify-content:flex-end; }
+.wbar { width:100%; border-radius:3px 3px 0 0; min-height:3px; background:var(--border); }
+.wbar.has { background:var(--purple-mid); }
+.wbar.today { background:var(--purple); }
+.wday { font-size:10px; color:var(--text-3); }
+.wday.tl { color:var(--purple); font-weight:600; }
 
-  /* ACTIVE */
-  .session-timer-block { text-align:center; margin-bottom:1.25rem; }
-  .session-timer { font-size:48px; font-weight:600; letter-spacing:-2px; color:var(--purple); font-variant-numeric:tabular-nums; }
-  .server-tag { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-3); margin-top:6px; }
-  .server-dot { width:5px; height:5px; border-radius:50%; background:var(--green-mid); }
-  .end-btn { width:100%; padding:13px; background:transparent; color:var(--text-2); border:0.5px solid var(--border-mid); border-radius:var(--radius); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:background 0.15s; margin-bottom:6px; }
-  .end-btn:hover { background:var(--surface); }
-  .end-btn:disabled { opacity:0.5; cursor:not-allowed; }
+/* SESSION ROWS */
+.sessions-card { background:var(--surface); border:.5px solid var(--border); border-radius:var(--radius); padding:13px 14px; margin-bottom:1rem; }
+.sesh-row { display:flex; align-items:flex-start; gap:10px; padding:7px 0; border-bottom:.5px solid var(--border); }
+.sesh-row:last-child { border-bottom:none; padding-bottom:0; }
+.sesh-dot { width:7px; height:7px; border-radius:50%; background:var(--purple-mid); flex-shrink:0; margin-top:5px; }
+.sesh-dot.latest { background:var(--purple); }
+.sesh-info { flex:1; min-width:0; }
+.sesh-time { font-size:12px; color:var(--text-2); }
+.sesh-note { font-size:12px; color:var(--text-3); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sesh-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+.tag-chip { font-size:10px; background:var(--purple-light); color:var(--purple); padding:1px 7px; border-radius:99px; font-weight:500; }
+.sesh-dur { font-size:13px; font-weight:600; color:var(--text); flex-shrink:0; }
+.empty-msg { font-size:13px; color:var(--text-3); text-align:center; padding:1rem 0; }
 
-  /* CARDS */
-  .cards-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:1rem; }
-  .cards-row.three { grid-template-columns:1fr 1fr 1fr; }
-  .card { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:13px 14px; }
-  .card-label { font-size:11px; color:var(--text-3); margin-bottom:4px; }
-  .card-val { font-size:18px; font-weight:600; color:var(--text); letter-spacing:-0.4px; }
-  .cards-row.three .card-val { font-size:15px; }
-  .card-sub { font-size:11px; color:var(--text-2); margin-top:2px; }
+/* MISC */
+.insight-card { background:var(--purple-light); border-radius:var(--radius); padding:13px 14px; margin-bottom:1rem; font-size:13px; color:var(--purple); line-height:1.5; }
+.streak-row { display:flex; gap:6px; margin-bottom:1rem; }
+.streak-dot { width:10px; height:10px; border-radius:50%; background:var(--border-mid); }
+.streak-dot.done { background:var(--purple); }
+.streak-dot.td { background:var(--purple); outline:2.5px solid var(--purple-mid); outline-offset:1px; }
+.sl { font-size:11px; color:var(--text-3); margin-bottom:8px; margin-top:.25rem; }
 
-  /* WEEK */
-  .week-card { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:13px 14px; margin-bottom:1rem; }
-  .week-bars { display:flex; align-items:flex-end; gap:5px; height:56px; margin-bottom:5px; }
-  .wbar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; height:100%; justify-content:flex-end; }
-  .wbar { width:100%; border-radius:3px 3px 0 0; min-height:3px; background:var(--border); }
-  .wbar.has { background:var(--purple-mid); }
-  .wbar.today { background:var(--purple); }
-  .wday { font-size:10px; color:var(--text-3); }
-  .wday.tl { color:var(--purple); font-weight:600; }
+/* SUMMARY */
+.summary-hero { text-align:center; padding:2rem 0 1.5rem; }
+.sum-icon { width:52px; height:52px; border-radius:50%; background:var(--green-light); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
+.sum-icon svg { width:24px; height:24px; stroke:var(--green); fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+.sum-dur { font-size:56px; font-weight:600; letter-spacing:-2.5px; color:var(--text); line-height:1; }
+.sum-label { font-size:13px; color:var(--text-3); margin-top:8px; }
+.sum-meta { font-size:12px; color:var(--text-3); margin-top:4px; }
+.cta-row { display:flex; gap:8px; margin-top:1.5rem; }
+.cta-sec { flex:1; padding:12px; background:transparent; color:var(--text-2); border:.5px solid var(--border-mid); border-radius:var(--radius); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; }
+.cta-sec:hover { background:var(--surface); }
+.cta-pri { flex:1; padding:12px; background:var(--purple); color:#fff; border:none; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+.cta-pri:hover { opacity:.9; }
 
-  /* SESSIONS */
-  .sessions-card { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:13px 14px; margin-bottom:1rem; }
-  .sesh-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:0.5px solid var(--border); }
-  .sesh-row:last-child { border-bottom:none; padding-bottom:0; }
-  .sesh-dot { width:7px; height:7px; border-radius:50%; background:var(--purple-mid); flex-shrink:0; }
-  .sesh-dot.latest { background:var(--purple); }
-  .sesh-time { font-size:12px; color:var(--text-2); flex:1; }
-  .sesh-dur { font-size:13px; font-weight:600; color:var(--text); }
-  .empty-msg { font-size:13px; color:var(--text-3); text-align:center; padding:1rem 0; }
+/* TOAST */
+.toast { position:fixed; bottom:calc(var(--bnav) + 12px); left:50%; transform:translateX(-50%) translateY(80px); background:var(--text); color:var(--bg); font-size:13px; padding:10px 18px; border-radius:99px; opacity:0; transition:all .3s ease; white-space:nowrap; z-index:999; pointer-events:none; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-  /* INSIGHT */
-  .insight-card { background:var(--purple-light); border-radius:var(--radius); padding:13px 14px; margin-bottom:1rem; font-size:13px; color:var(--purple); line-height:1.5; }
+/* SHORTCUT BANNER */
+.shortcut-banner { background:var(--purple-light); border-radius:var(--radius); padding:13px 14px; margin-bottom:1rem; display:flex; align-items:center; gap:10px; }
+.shortcut-banner-text { font-size:13px; color:var(--purple); flex:1; line-height:1.4; }
+.shortcut-banner-close { background:none; border:none; color:var(--purple-mid); cursor:pointer; font-size:18px; padding:0; line-height:1; }
 
-  /* STREAK */
-  .streak-row { display:flex; gap:6px; margin-bottom:1rem; }
-  .streak-dot { width:10px; height:10px; border-radius:50%; background:var(--border-mid); }
-  .streak-dot.done { background:var(--purple); }
-  .streak-dot.td { background:var(--purple); outline:2.5px solid var(--purple-mid); outline-offset:1px; }
+/* LOADING */
+.loading-overlay { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:100; }
+.loading-logo { font-size:24px; font-weight:600; color:var(--purple); letter-spacing:-.5px; opacity:.5; animation:fadeInOut 1.2s ease-in-out infinite; }
+@keyframes fadeInOut { 0%,100%{opacity:.3}50%{opacity:.8} }
 
-  .sl { font-size:11px; color:var(--text-3); margin-bottom:8px; margin-top:0.25rem; }
+/* SHEET */
+.sheet-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none; align-items:flex-end; }
+.sheet-overlay.open { display:flex; }
+.sheet { background:var(--surface); border-radius:20px 20px 0 0; padding:1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom)); width:100%; }
+.sheet-handle { width:36px; height:4px; background:var(--border-mid); border-radius:2px; margin:0 auto 1.25rem; }
+.sheet-title { font-size:16px; font-weight:600; letter-spacing:-.3px; margin-bottom:1.25rem; }
+.sheet-field { margin-bottom:1rem; }
+.sheet-field label { display:block; font-size:12px; color:var(--text-2); margin-bottom:5px; font-weight:500; }
+.sheet-field input,.sheet-field textarea { width:100%; padding:10px 13px; background:var(--bg); border:.5px solid var(--border-mid); border-radius:var(--radius-sm); color:var(--text); font-size:14px; font-family:inherit; outline:none; transition:border-color .15s; resize:none; }
+.sheet-field input:focus,.sheet-field textarea:focus { border-color:var(--purple); }
+.sheet-field input::placeholder,.sheet-field textarea::placeholder { color:var(--text-3); }
+.sheet-btns { display:flex; gap:8px; margin-top:1.25rem; }
+.sheet-err { font-size:12px; color:var(--red); margin-top:8px; display:none; }
+.sheet-err.show { display:block; }
 
-  /* SUMMARY */
-  .summary-hero { text-align:center; padding:2rem 0 1.5rem; }
-  .sum-icon { width:52px; height:52px; border-radius:50%; background:var(--green-light); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
-  .sum-icon svg { width:24px; height:24px; stroke:var(--green); fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
-  .sum-dur { font-size:56px; font-weight:600; letter-spacing:-2.5px; color:var(--text); line-height:1; }
-  .sum-label { font-size:13px; color:var(--text-3); margin-top:8px; }
-  .sum-meta { font-size:12px; color:var(--text-3); margin-top:4px; }
-  .cta-row { display:flex; gap:8px; margin-top:1.5rem; }
-  .cta-sec { flex:1; padding:12px; background:transparent; color:var(--text-2); border:0.5px solid var(--border-mid); border-radius:var(--radius); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; }
-  .cta-sec:hover { background:var(--surface); }
-  .cta-pri { flex:1; padding:12px; background:var(--purple); color:#fff; border:none; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
-  .cta-pri:hover { opacity:0.9; }
+/* TAG INPUT */
+.tag-input-wrap { display:flex; flex-wrap:wrap; gap:6px; padding:6px 10px; background:var(--bg); border:.5px solid var(--border-mid); border-radius:var(--radius-sm); cursor:text; min-height:40px; align-items:center; transition:border-color .15s; }
+.tag-input-wrap:focus-within { border-color:var(--purple); }
+.tag-pill { display:inline-flex; align-items:center; gap:3px; background:var(--purple-light); color:var(--purple); font-size:12px; font-weight:500; padding:2px 8px; border-radius:99px; }
+.tag-pill button { background:none; border:none; color:var(--purple-mid); cursor:pointer; font-size:14px; padding:0; line-height:1; }
+.tag-input-wrap input { border:none; background:transparent; outline:none; font-size:13px; color:var(--text); font-family:inherit; min-width:80px; flex:1; padding:2px 0; }
+.tag-input-wrap input::placeholder { color:var(--text-3); }
 
-  /* TOAST */
-  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--text); color:var(--bg); font-size:13px; padding:10px 18px; border-radius:99px; opacity:0; transition:all 0.3s ease; white-space:nowrap; z-index:999; pointer-events:none; }
-  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+/* HISTORY */
+.history-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1rem; }
+.filter-chip { font-size:12px; padding:4px 12px; border-radius:99px; border:.5px solid var(--border-mid); background:transparent; color:var(--text-2); cursor:pointer; font-family:inherit; transition:all .15s; }
+.filter-chip.active { background:var(--purple); color:#fff; border-color:var(--purple); }
+.history-group { margin-bottom:1rem; }
+.history-date-label { font-size:11px; color:var(--text-3); margin-bottom:6px; font-weight:500; text-transform:uppercase; letter-spacing:.3px; }
+.history-card { background:var(--surface); border:.5px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.history-row { display:flex; align-items:flex-start; gap:10px; padding:11px 14px; border-bottom:.5px solid var(--border); }
+.history-row:last-child { border-bottom:none; }
+.history-info { flex:1; min-width:0; }
+.history-time { font-size:12px; color:var(--text-2); }
+.history-note { font-size:12px; color:var(--text-3); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.history-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
+.history-dur { font-size:13px; font-weight:600; color:var(--text); flex-shrink:0; }
+.load-more-btn { width:100%; padding:11px; background:var(--surface); border:.5px solid var(--border); border-radius:var(--radius); font-size:13px; color:var(--text-2); cursor:pointer; font-family:inherit; margin-top:8px; }
+.load-more-btn:hover { background:var(--bg); }
 
-  /* SHORTCUT BANNER */
-  .shortcut-banner { background:var(--purple-light); border-radius:var(--radius); padding:13px 14px; margin-bottom:1rem; display:flex; align-items:center; gap:10px; }
-  .shortcut-banner-text { font-size:13px; color:var(--purple); flex:1; line-height:1.4; }
-  .shortcut-banner-close { background:none; border:none; color:var(--purple-mid); cursor:pointer; font-size:18px; padding:0; line-height:1; }
+/* SETTINGS */
+.settings-section { margin-bottom:1.5rem; }
+.settings-label { font-size:11px; color:var(--text-3); font-weight:500; margin-bottom:8px; letter-spacing:.3px; text-transform:uppercase; }
+.settings-card { background:var(--surface); border:.5px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.settings-row { display:flex; align-items:center; padding:13px 14px; border-bottom:.5px solid var(--border); gap:10px; }
+.settings-row:last-child { border-bottom:none; }
+.settings-row-label { font-size:13px; color:var(--text); flex:1; }
+.settings-row-val { font-size:13px; color:var(--text-3); }
+.settings-row-btn { background:none; border:none; font-size:13px; color:var(--purple); cursor:pointer; font-family:inherit; font-weight:500; padding:0; flex-shrink:0; }
+.edit-wrap { padding:0 14px 13px; border-bottom:.5px solid var(--border); display:none; }
+.edit-wrap.open { display:block; }
+.edit-input { width:100%; padding:9px 12px; background:var(--bg); border:.5px solid var(--border-mid); border-radius:var(--radius-sm); color:var(--text); font-size:14px; font-family:inherit; outline:none; margin-bottom:8px; }
+.edit-input:focus { border-color:var(--purple); }
+.edit-save { padding:8px 16px; background:var(--purple); color:#fff; border:none; border-radius:var(--radius-sm); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+.field-msg { font-size:12px; margin-top:6px; display:none; }
+.field-msg.ok { display:block; color:var(--green); }
+.field-msg.err { display:block; color:var(--red); }
+.danger-btn { width:100%; padding:12px; background:transparent; color:var(--red); border:.5px solid rgba(192,57,43,.3); border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; }
+.danger-btn:hover { background:var(--red-light); }
 
-  /* LOADING */
-  .loading-overlay { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:100; }
-  .loading-logo { font-size:24px; font-weight:600; color:var(--purple); letter-spacing:-0.5px; opacity:0.5; animation:fadeInOut 1.2s ease-in-out infinite; }
-  @keyframes fadeInOut { 0%,100%{opacity:0.3}50%{opacity:0.8} }
-
-  .logout-btn { background:none; border:none; font-size:12px; color:var(--text-3); cursor:pointer; font-family:inherit; padding:0; }
-  .logout-btn:hover { color:var(--text-2); }
-
-  @media (max-width:400px) { .hero-time{font-size:48px} .sum-dur{font-size:44px} }
-  @media (prefers-reduced-motion:reduce) { .live-dot,.loading-logo{animation:none;opacity:0.5} }
+@media (max-width:400px) { .hero-time{font-size:48px} .sum-dur{font-size:44px} }
+@media (prefers-reduced-motion:reduce) { .live-dot,.loading-logo{animation:none;opacity:.5} }
 </style>
 </head>
 <body>
 
-<div class="loading-overlay" id="loading">
-  <div class="loading-logo">tracl</div>
+<div class="loading-overlay" id="loading"><div class="loading-logo">tracl</div></div>
+<div class="toast" id="toast"></div>
+
+<!-- END SESSION SHEET -->
+<div class="sheet-overlay" id="end-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">end session</div>
+    <div class="sheet-field">
+      <label>note <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
+      <textarea id="end-note" placeholder="what did you work on?" rows="2"></textarea>
+    </div>
+    <div class="sheet-field">
+      <label>tags <span style="color:var(--text-3);font-weight:400">(optional · press Enter to add)</span></label>
+      <div class="tag-input-wrap" id="end-tag-wrap">
+        <input id="end-tag-input" placeholder="work, study…" type="text" autocomplete="off">
+      </div>
+    </div>
+    <div class="sheet-err" id="end-err"></div>
+    <div class="sheet-btns">
+      <button class="cta-sec" onclick="closeEndSheet()">cancel</button>
+      <button class="cta-pri" id="end-confirm-btn" onclick="confirmEnd()">save session</button>
+    </div>
+  </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- DELETE ACCOUNT SHEET -->
+<div class="sheet-overlay" id="delete-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="color:var(--red)">delete account</div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:1.25rem">Permanently erases your account and all sessions. Enter your password to confirm.</p>
+    <div class="sheet-field">
+      <label>password</label>
+      <input type="password" id="del-pw" placeholder="your password">
+    </div>
+    <div class="sheet-err" id="del-err"></div>
+    <div class="sheet-btns">
+      <button class="cta-sec" onclick="closeDeleteSheet()">cancel</button>
+      <button id="del-btn" onclick="confirmDelete()" style="flex:1;padding:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">delete everything</button>
+    </div>
+  </div>
+</div>
 
 <!-- SIGNUP -->
 <div class="screen" id="screen-signup">
@@ -203,11 +286,11 @@
     <div class="auth-card">
       <div class="auth-title">create account</div>
       <div class="auth-sub">takes 10 seconds</div>
-      <div class="api-error" id="su-api-err"></div>
-      <div class="field"><label for="su-name">your name</label><input id="su-name" type="text" placeholder="Arjun" autocomplete="given-name"/><div class="field-error" id="err-su-name">please enter your name</div></div>
-      <div class="field"><label for="su-email">email</label><input id="su-email" type="email" placeholder="arjun@example.com" autocomplete="email"/><div class="field-error" id="err-su-email">please enter a valid email</div></div>
-      <div class="field"><label for="su-pass">password</label><input id="su-pass" type="password" placeholder="at least 6 characters" autocomplete="new-password"/><div class="field-error" id="err-su-pass">password must be at least 6 characters</div></div>
-      <div class="field" style="margin-bottom:1.25rem"><label for="su-goal">daily goal <span style="color:var(--text-3);font-weight:400">(e.g. 5h or 5h 30m)</span></label><input id="su-goal" type="text" placeholder="5h 00m"/></div>
+      <div class="api-error" id="su-err"></div>
+      <div class="field"><label>your name</label><input id="su-name" type="text" placeholder="Arjun" autocomplete="given-name"><div class="field-error" id="err-su-name">please enter your name</div></div>
+      <div class="field"><label>email</label><input id="su-email" type="email" placeholder="arjun@example.com" autocomplete="email"><div class="field-error" id="err-su-email">please enter a valid email</div></div>
+      <div class="field"><label>password</label><input id="su-pass" type="password" placeholder="at least 6 characters" autocomplete="new-password"><div class="field-error" id="err-su-pass">password must be at least 6 characters</div></div>
+      <div class="field" style="margin-bottom:1.25rem"><label>daily goal <span style="color:var(--text-3);font-weight:400">(e.g. 5h or 5h 30m)</span></label><input id="su-goal" type="text" placeholder="5h 00m"></div>
       <button class="btn-primary" id="su-btn" onclick="handleSignup()">get started</button>
       <div class="auth-switch">already have an account? <a onclick="showScreen('screen-login')">sign in</a></div>
     </div>
@@ -222,9 +305,9 @@
     <div class="auth-card">
       <div class="auth-title">welcome back</div>
       <div class="auth-sub">sign in to continue</div>
-      <div class="api-error" id="li-api-err"></div>
-      <div class="field"><label for="li-email">email</label><input id="li-email" type="email" placeholder="arjun@example.com" autocomplete="email"/><div class="field-error" id="err-li-email">please enter your email</div></div>
-      <div class="field" style="margin-bottom:1.25rem"><label for="li-pass">password</label><input id="li-pass" type="password" placeholder="your password" autocomplete="current-password"/><div class="field-error" id="err-li-pass">incorrect email or password</div></div>
+      <div class="api-error" id="li-err"></div>
+      <div class="field"><label>email</label><input id="li-email" type="email" placeholder="arjun@example.com" autocomplete="email"><div class="field-error" id="err-li-email">please enter your email</div></div>
+      <div class="field" style="margin-bottom:1.25rem"><label>password</label><input id="li-pass" type="password" placeholder="your password" autocomplete="current-password"><div class="field-error" id="err-li-pass">incorrect email or password</div></div>
       <button class="btn-primary" id="li-btn" onclick="handleLogin()">sign in</button>
       <div class="auth-switch">no account? <a onclick="showScreen('screen-signup')">create one</a></div>
     </div>
@@ -241,19 +324,16 @@
     </div>
   </nav>
   <div class="app-body">
-
     <div id="shortcut-banner" style="display:none" class="shortcut-banner">
       <div class="shortcut-banner-text" id="shortcut-banner-text"></div>
-      <button class="shortcut-banner-close" onclick="document.getElementById('shortcut-banner').style.display='none'">×</button>
+      <button class="shortcut-banner-close" onclick="this.closest('.shortcut-banner').style.display='none'">×</button>
     </div>
-
     <div class="hero-block">
       <div class="hero-label">today</div>
       <div class="hero-time" id="hero-time">0h 00m</div>
       <div class="hero-sub" id="hero-sub">—</div>
       <div class="goal-bar" id="goal-bar" style="display:none"><div class="goal-fill" id="goal-fill" style="width:0%"></div></div>
     </div>
-
     <div id="idle-state">
       <div class="start-ring" onclick="handleStart()">
         <button class="start-core" aria-label="start session">
@@ -263,7 +343,6 @@
       </div>
       <div class="hint-text">tap to begin · or place phone in dock</div>
     </div>
-
     <div id="active-state" style="display:none">
       <div class="session-timer-block">
         <div style="font-size:11px;color:var(--text-3);margin-bottom:5px">this session</div>
@@ -274,10 +353,9 @@
         <div class="card"><div class="card-label">started at</div><div class="card-val" id="active-start-time">—</div><div class="card-sub" id="active-method">manual</div></div>
         <div class="card"><div class="card-label">today so far</div><div class="card-val" id="active-today">—</div><div class="card-sub" id="active-goal-sub">—</div></div>
       </div>
-      <button class="end-btn" id="end-btn" onclick="handleEnd()">end session</button>
+      <button class="end-btn" id="end-btn" onclick="openEndSheet()">end session</button>
       <div class="hint-text">or pull phone from dock</div>
     </div>
-
     <div style="margin-top:1.25rem">
       <div class="cards-row three">
         <div class="card"><div class="card-label">this week</div><div class="card-val" id="stat-week">—</div></div>
@@ -290,11 +368,157 @@
       <div class="sl">today's sessions</div>
       <div class="sessions-card" id="sessions-list"><div class="empty-msg">no sessions yet · tap start when you're ready</div></div>
       <div id="insight-block" style="display:none"><div class="insight-card" id="insight-text"></div></div>
-      <div style="text-align:center;margin-top:1.5rem;padding-bottom:1rem">
-        <button class="logout-btn" onclick="handleLogout()">sign out</button>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="bnav-tab active" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="bnav-label">today</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span class="bnav-label">history</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span class="bnav-label">profile</span>
+    </button>
+  </nav>
+</div>
+
+<!-- HISTORY -->
+<div class="screen" id="screen-history">
+  <nav class="app-nav">
+    <span class="nav-title">history</span>
+    <div class="nav-right">
+      <button onclick="downloadCSV()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);font-family:inherit;padding:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        CSV
+      </button>
+    </div>
+  </nav>
+  <div class="app-body">
+    <div class="history-filter" id="tag-filters"></div>
+    <div id="history-list"></div>
+    <div class="empty-msg" id="history-empty" style="display:none;padding:3rem 0">no sessions yet</div>
+    <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreHistory()">load more</button>
+  </div>
+  <nav class="bottom-nav">
+    <button class="bnav-tab" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="bnav-label">today</span>
+    </button>
+    <button class="bnav-tab active" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span class="bnav-label">history</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span class="bnav-label">profile</span>
+    </button>
+  </nav>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen" id="screen-settings">
+  <nav class="app-nav"><span class="nav-title">profile</span></nav>
+  <div class="app-body">
+
+    <div class="settings-section">
+      <div class="settings-label">profile</div>
+      <div class="settings-card">
+        <!-- Name -->
+        <div class="settings-row">
+          <span class="settings-row-label">name</span>
+          <span class="settings-row-val" id="disp-name"></span>
+          <button class="settings-row-btn" onclick="toggleEdit('name')">edit</button>
+        </div>
+        <div class="edit-wrap" id="edit-name-wrap">
+          <input class="edit-input" id="edit-name-val" type="text" placeholder="your name">
+          <button class="edit-save" onclick="saveName()">save</button>
+          <div class="field-msg" id="name-msg"></div>
+        </div>
+        <!-- Goal -->
+        <div class="settings-row">
+          <span class="settings-row-label">daily goal</span>
+          <span class="settings-row-val" id="disp-goal"></span>
+          <button class="settings-row-btn" onclick="toggleEdit('goal')">edit</button>
+        </div>
+        <div class="edit-wrap" id="edit-goal-wrap">
+          <input class="edit-input" id="edit-goal-val" type="text" placeholder="e.g. 5h or 5h 30m">
+          <button class="edit-save" onclick="saveGoal()">save</button>
+          <div class="field-msg" id="goal-msg"></div>
+        </div>
+        <!-- Email (read-only) -->
+        <div class="settings-row">
+          <span class="settings-row-label">email</span>
+          <span class="settings-row-val" id="disp-email"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">security</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <span class="settings-row-label">password</span>
+          <button class="settings-row-btn" onclick="toggleEdit('password')">change</button>
+        </div>
+        <div class="edit-wrap" id="edit-password-wrap">
+          <input class="edit-input" id="cur-pw" type="password" placeholder="current password" style="margin-bottom:8px">
+          <input class="edit-input" id="new-pw" type="password" placeholder="new password (min 6 chars)">
+          <button class="edit-save" onclick="savePassword()">update</button>
+          <div class="field-msg" id="pw-msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">stats</div>
+      <div class="settings-card">
+        <div class="settings-row"><span class="settings-row-label">total sessions</span><span class="settings-row-val" id="st-total">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">all-time study</span><span class="settings-row-val" id="st-hours">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">current streak</span><span class="settings-row-val" id="st-streak">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">top tags</span><span class="settings-row-val" id="st-tags" style="max-width:55%;text-align:right">—</span></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">data</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <span class="settings-row-label">export sessions</span>
+          <button class="settings-row-btn" onclick="downloadCSV()">download CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">account</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <button class="settings-row-btn" onclick="handleLogout()" style="color:var(--text-2);font-weight:400;text-align:left">sign out</button>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <button class="danger-btn" onclick="openDeleteSheet()">delete account</button>
       </div>
     </div>
   </div>
+  <nav class="bottom-nav">
+    <button class="bnav-tab" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="bnav-label">today</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span class="bnav-label">history</span>
+    </button>
+    <button class="bnav-tab active" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span class="bnav-label">profile</span>
+    </button>
+  </nav>
 </div>
 
 <!-- SUMMARY -->
@@ -303,7 +527,7 @@
     <span class="nav-logo">tracl</span>
     <div class="nav-right"><div class="nav-avatar" id="sum-avatar">—</div></div>
   </nav>
-  <div class="app-body">
+  <div class="app-body" style="padding-bottom:1.25rem">
     <div class="summary-hero">
       <div class="sum-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="sum-dur" id="sum-dur">—</div>
@@ -317,325 +541,252 @@
     </div>
     <div class="insight-card" id="sum-insight" style="margin-top:1rem"></div>
     <div class="cta-row">
-      <button class="cta-sec" onclick="goToDashboard()">dashboard</button>
+      <button class="cta-sec" onclick="switchTab('dashboard')">dashboard</button>
       <button class="cta-pri" onclick="handleStartAnother()">start another</button>
     </div>
   </div>
 </div>
 
 <script>
-const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:3000' : '';
+const API = (window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
 
 // ── STATE ──
-let currentUser = null;
-let activeSessionId = null;
-let activeStartedAt = null;
-let priorTodaySecs = 0;
-let todaySessions = [];
-let tickInterval = null;
-let sseSource = null;
+let currentUser=null, activeSessionId=null, activeStartedAt=null;
+let priorTodaySecs=0, todaySessions=[], tickInterval=null, sseSource=null;
+let endTags=[];
+let histPage=1, histTotal=0, histTag=null, histSessions=[];
+const HIST_LIMIT=20;
 
-const TOKEN_KEY = 'tracl_token';
-const getToken = () => localStorage.getItem(TOKEN_KEY);
-const setToken = t => localStorage.setItem(TOKEN_KEY, t);
-const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+const TOKEN_KEY='tracl_token';
+const getToken=()=>localStorage.getItem(TOKEN_KEY);
+const setToken=t=>localStorage.setItem(TOKEN_KEY,t);
+const clearToken=()=>localStorage.removeItem(TOKEN_KEY);
 
 // ── API ──
-async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  const token = getToken();
-  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(API + path, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'request failed');
+async function api(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  const tok=getToken(); if(tok) opts.headers['Authorization']='Bearer '+tok;
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch(API+path,opts);
+  const data=await res.json();
+  if(!res.ok) throw new Error(data.error||'request failed');
   return data;
 }
 
 // ── UTILS ──
-function fmtHM(secs) {
-  const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60);
-  if (h===0) return m+'m';
-  return h+'h '+String(m).padStart(2,'0')+'m';
+function fmtHM(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?h+'h '+String(m).padStart(2,'0')+'m':m+'m';}
+function fmtHMS(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return[h,m,ss].map(v=>String(v).padStart(2,'0')).join(':');}
+function fmtTime(ts){const d=new Date(ts),h=d.getHours(),m=d.getMinutes();return(h%12||12)+':'+String(m).padStart(2,'0')+(h>=12?' pm':' am');}
+function fmtDate(ts){return new Date(ts).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});}
+function fmtDateShort(ts){
+  const d=new Date(ts); d.setHours(0,0,0,0);
+  const t=new Date(); t.setHours(0,0,0,0);
+  const y=new Date(t); y.setDate(y.getDate()-1);
+  if(d.getTime()===t.getTime()) return 'Today';
+  if(d.getTime()===y.getTime()) return 'Yesterday';
+  return new Date(ts).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
 }
-function fmtHMS(secs) {
-  const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60),s=secs%60;
-  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-}
-function fmtTime(ts) {
-  const d=new Date(ts),h=d.getHours(),m=d.getMinutes();
-  return (h%12||12)+':'+String(m).padStart(2,'0')+(h>=12?' pm':' am');
-}
-function fmtDate(ts) {
-  return new Date(ts).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-}
-function todayKey() { return new Date().toISOString().slice(0,10); }
-function dayKey(ts) { return new Date(ts).toISOString().slice(0,10); }
-function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
-function parseGoalSecs(str) {
-  if (!str||!str.trim()) return 18000;
-  const hm=str.match(/(\d+)h\s*(\d+)?m?/);
-  if (hm) return parseInt(hm[1]||0)*3600+parseInt(hm[2]||0)*60;
+function fmtGoal(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return m?h+'h '+m+'m':h+'h';}
+function todayKey(){return new Date().toISOString().slice(0,10);}
+function dayKey(ts){return new Date(ts).toISOString().slice(0,10);}
+function initials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function parseGoalSecs(str){
+  if(!str||!str.trim()) return 18000;
+  const hm=str.match(/(\d+)h\s*(\d+)?m?/); if(hm) return parseInt(hm[1]||0)*3600+parseInt(hm[2]||0)*60;
   const h=str.match(/^(\d+)h$/); if(h) return parseInt(h[1])*3600;
   const m=str.match(/^(\d+)m$/); if(m) return parseInt(m[1])*60;
   return 18000;
 }
+function tagsHtml(tags){return(tags||[]).map(t=>`<span class="tag-chip">${t}</span>`).join('');}
 
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0,0);
-}
-function hideLoading() { document.getElementById('loading').style.display='none'; }
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+function hideLoading(){document.getElementById('loading').style.display='none';}
 
 let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ── TABS ──
+function switchTab(tab){
+  if(tab==='dashboard'){renderDashboard();showScreen('screen-dashboard');}
+  else if(tab==='history'){loadHistory(true);showScreen('screen-history');}
+  else if(tab==='settings'){renderSettings();showScreen('screen-settings');}
 }
 
 // ── SSE ──
-function connectSSE() {
-  if (sseSource) sseSource.close();
-  const token = getToken();
-  if (!token) return;
-
-  sseSource = new EventSource(API + '/events?token=' + encodeURIComponent(token));
-
-  sseSource.addEventListener('session:start', e => {
-    const data = JSON.parse(e.data);
-    // Another tab started a session — sync our state
-    if (!activeSessionId) {
-      activeSessionId = data.sessionId;
-      activeStartedAt = data.startedAt;
-      priorTodaySecs = todaySessions.reduce((a,s)=>a+s.durationSecs,0);
-      renderDashboard();
-      showToast('session started on another device');
-    }
+function connectSSE(){
+  if(sseSource){sseSource.close();sseSource=null;}
+  const tok=getToken(); if(!tok) return;
+  sseSource=new EventSource(API+'/events?token='+encodeURIComponent(tok));
+  sseSource.addEventListener('session:start',e=>{
+    const d=JSON.parse(e.data);
+    if(!activeSessionId){activeSessionId=d.sessionId;activeStartedAt=d.startedAt;priorTodaySecs=todaySessions.reduce((a,s)=>a+s.durationSecs,0);renderDashboard();showToast('session started on another device');}
   });
-
-  sseSource.addEventListener('session:end', async e => {
-    const data = JSON.parse(e.data);
-    // Another tab ended the session — sync
-    if (activeSessionId === data.sessionId) {
-      clearInterval(tickInterval);
-      activeSessionId = null;
-      activeStartedAt = null;
-      await loadTodaySessions();
-      renderDashboard();
-      showToast('session ended on another device');
-    }
+  sseSource.addEventListener('session:end',async e=>{
+    const d=JSON.parse(e.data);
+    if(activeSessionId===d.sessionId){clearInterval(tickInterval);activeSessionId=null;activeStartedAt=null;await loadTodaySessions();renderDashboard();showToast('session ended · synced');}
   });
-
-  sseSource.addEventListener('session:discard', e => {
-    const data = JSON.parse(e.data);
-    if (activeSessionId === data.sessionId) {
-      clearInterval(tickInterval);
-      activeSessionId = null;
-      activeStartedAt = null;
-      renderDashboard();
-    }
+  sseSource.addEventListener('session:discard',e=>{
+    const d=JSON.parse(e.data);
+    if(activeSessionId===d.sessionId){clearInterval(tickInterval);activeSessionId=null;activeStartedAt=null;renderDashboard();}
   });
-
-  sseSource.onerror = () => {
-    // Auto-reconnect after 3s
-    setTimeout(connectSSE, 3000);
-  };
-}
-
-// SSE needs token in query param since EventSource doesn't support custom headers
-// Adjust the /events route to also accept ?token=
-function connectSSEWithToken() {
-  if (sseSource) { sseSource.close(); sseSource = null; }
-  const token = getToken();
-  if (!token) return;
-  const url = API + '/events?token=' + encodeURIComponent(token);
-  sseSource = new EventSource(url);
-
-  sseSource.addEventListener('session:start', e => {
-    const data = JSON.parse(e.data);
-    if (!activeSessionId) {
-      activeSessionId = data.sessionId;
-      activeStartedAt = data.startedAt;
-      priorTodaySecs = todaySessions.reduce((a,s)=>a+s.durationSecs,0);
-      renderDashboard();
-      showToast('session started on another device');
-    }
-  });
-
-  sseSource.addEventListener('session:end', async e => {
-    const data = JSON.parse(e.data);
-    if (activeSessionId === data.sessionId) {
-      clearInterval(tickInterval);
-      activeSessionId = null; activeStartedAt = null;
-      await loadTodaySessions();
-      renderDashboard();
-      showToast('session ended · synced across devices');
-    }
-  });
-
-  sseSource.addEventListener('session:discard', e => {
-    const data = JSON.parse(e.data);
-    if (activeSessionId === data.sessionId) {
-      clearInterval(tickInterval);
-      activeSessionId = null; activeStartedAt = null;
-      renderDashboard();
-    }
-  });
-
-  sseSource.onerror = () => setTimeout(connectSSEWithToken, 3000);
+  sseSource.onerror=()=>setTimeout(connectSSE,3000);
 }
 
 // ── AUTH ──
-async function handleSignup() {
+async function handleSignup(){
   const name=document.getElementById('su-name').value.trim();
   const email=document.getElementById('su-email').value.trim();
   const pass=document.getElementById('su-pass').value;
   const goal=document.getElementById('su-goal').value.trim();
   let ok=true;
-  const e=(id,show,msg)=>{const el=document.getElementById(id);el.classList.toggle('show',show);if(msg)el.textContent=msg;if(show)ok=false;};
-  e('err-su-name',!name);e('err-su-email',!email||!email.includes('@'));e('err-su-pass',pass.length<6);
-  if(!ok)return;
-  document.getElementById('su-api-err').classList.remove('show');
+  const ve=(id,show)=>{document.getElementById(id).classList.toggle('show',show);if(show)ok=false;};
+  ve('err-su-name',!name);ve('err-su-email',!email||!email.includes('@'));ve('err-su-pass',pass.length<6);
+  if(!ok) return;
+  document.getElementById('su-err').classList.remove('show');
   document.getElementById('su-btn').disabled=true;
-  try {
+  try{
     const data=await api('POST','/auth/signup',{name,email,password:pass,goalSecs:parseGoalSecs(goal)});
-    setToken(data.token);
-    await enterApp(data.user);
-  } catch(err) {
-    const el=document.getElementById('su-api-err');el.textContent=err.message;el.classList.add('show');
-  } finally { document.getElementById('su-btn').disabled=false; }
+    setToken(data.token); await enterApp(data.user);
+  }catch(err){const el=document.getElementById('su-err');el.textContent=err.message;el.classList.add('show');}
+  finally{document.getElementById('su-btn').disabled=false;}
 }
 
-async function handleLogin() {
+async function handleLogin(){
   const email=document.getElementById('li-email').value.trim();
   const pass=document.getElementById('li-pass').value;
   let ok=true;
-  const e=(id,show)=>{document.getElementById(id).classList.toggle('show',show);if(show)ok=false;};
-  e('err-li-email',!email);e('err-li-pass',!pass);
-  if(!ok)return;
-  document.getElementById('li-api-err').classList.remove('show');
+  const ve=(id,show)=>{document.getElementById(id).classList.toggle('show',show);if(show)ok=false;};
+  ve('err-li-email',!email);ve('err-li-pass',!pass);
+  if(!ok) return;
+  document.getElementById('li-err').classList.remove('show');
   document.getElementById('li-btn').disabled=true;
-  try {
+  try{
     const data=await api('POST','/auth/login',{email,password:pass});
-    setToken(data.token);
-    await enterApp(data.user);
-  } catch(err) {
-    const el=document.getElementById('li-api-err');el.textContent=err.message;el.classList.add('show');
-  } finally { document.getElementById('li-btn').disabled=false; }
+    setToken(data.token); await enterApp(data.user);
+  }catch(err){const el=document.getElementById('li-err');el.textContent=err.message;el.classList.add('show');}
+  finally{document.getElementById('li-btn').disabled=false;}
 }
 
-function handleLogout() {
+function handleLogout(){
   clearInterval(tickInterval);
   if(sseSource){sseSource.close();sseSource=null;}
-  clearToken();
-  currentUser=null;activeSessionId=null;activeStartedAt=null;
+  clearToken();currentUser=null;activeSessionId=null;activeStartedAt=null;
   showScreen('screen-signup');
 }
 
 // ── SESSION ──
-async function handleStart(method) {
+async function handleStart(method){
   if(activeSessionId) return;
-  try {
+  try{
     const data=await api('POST','/sessions/start',{method:method||'manual'});
-    activeSessionId=data.sessionId;
-    activeStartedAt=data.startedAt;
+    activeSessionId=data.sessionId;activeStartedAt=data.startedAt;
     priorTodaySecs=todaySessions.reduce((a,s)=>a+s.durationSecs,0);
     renderDashboard();
-  } catch(err) {
-    if(err.message&&err.message.includes('already active')) {
-      await loadTodaySessions(); renderDashboard();
-    }
+  }catch(err){
+    if(err.message&&err.message.includes('already active')){await loadTodaySessions();renderDashboard();}
   }
 }
 
-async function handleEnd() {
+// ── END SESSION SHEET ──
+function openEndSheet(){
   if(!activeSessionId) return;
-  document.getElementById('end-btn').disabled=true;
-  try {
-    const data=await api('POST','/sessions/end',{sessionId:activeSessionId});
-    clearInterval(tickInterval);
-    if(data.discarded){activeSessionId=null;activeStartedAt=null;await loadTodaySessions();renderDashboard();return;}
-    await loadTodaySessions();
-    showSummary(data);
-    activeSessionId=null;activeStartedAt=null;
-  } catch{document.getElementById('end-btn').disabled=false;}
+  endTags=[];
+  document.getElementById('end-note').value='';
+  document.getElementById('end-tag-input').value='';
+  renderEndTags();
+  document.getElementById('end-err').classList.remove('show');
+  document.getElementById('end-confirm-btn').disabled=false;
+  document.getElementById('end-sheet').classList.add('open');
+}
+function closeEndSheet(){document.getElementById('end-sheet').classList.remove('open');}
+
+function renderEndTags(){
+  const wrap=document.getElementById('end-tag-wrap');
+  const inp=document.getElementById('end-tag-input');
+  wrap.querySelectorAll('.tag-pill').forEach(el=>el.remove());
+  endTags.forEach((tag,i)=>{
+    const pill=document.createElement('span');
+    pill.className='tag-pill';
+    pill.innerHTML=tag+'<button type="button" onclick="endTags.splice('+i+',1);renderEndTags()">×</button>';
+    wrap.insertBefore(pill,inp);
+  });
 }
 
-async function loadTodaySessions() {
-  try {
+document.getElementById('end-tag-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'||e.key===','||e.key===' '){
+    e.preventDefault();
+    const val=e.target.value.trim().toLowerCase().replace(/,/g,'');
+    if(val&&endTags.length<10&&!endTags.includes(val)){endTags.push(val);renderEndTags();}
+    e.target.value='';
+  }
+  if(e.key==='Backspace'&&!e.target.value&&endTags.length){endTags.pop();renderEndTags();}
+});
+
+async function confirmEnd(){
+  if(!activeSessionId) return;
+  const pending=document.getElementById('end-tag-input').value.trim().toLowerCase();
+  if(pending&&!endTags.includes(pending)) endTags.push(pending);
+  document.getElementById('end-tag-input').value='';
+  document.getElementById('end-confirm-btn').disabled=true;
+  const note=document.getElementById('end-note').value.trim()||null;
+  try{
+    const data=await api('POST','/sessions/end',{sessionId:activeSessionId,note,tags:endTags});
+    closeEndSheet();clearInterval(tickInterval);
+    if(data.discarded){activeSessionId=null;activeStartedAt=null;await loadTodaySessions();renderDashboard();return;}
+    await loadTodaySessions();showSummary(data);activeSessionId=null;activeStartedAt=null;
+  }catch(err){
+    const el=document.getElementById('end-err');el.textContent=err.message;el.classList.add('show');
+    document.getElementById('end-confirm-btn').disabled=false;
+  }
+}
+
+async function loadTodaySessions(){
+  try{
     const data=await api('GET','/sessions/today');
     todaySessions=data.sessions||[];
-    if(data.activeSession&&!activeSessionId){
-      activeSessionId=data.activeSession.id;
-      activeStartedAt=data.activeSession.started_at;
-      priorTodaySecs=todaySessions.reduce((a,s)=>a+s.durationSecs,0);
-    }
-  } catch{todaySessions=[];}
+    if(data.activeSession&&!activeSessionId){activeSessionId=data.activeSession.id;activeStartedAt=data.activeSession.started_at;priorTodaySecs=todaySessions.reduce((a,s)=>a+s.durationSecs,0);}
+  }catch{todaySessions=[];}
 }
 
 // ── URL ACTION ──
-// Handles ?action=start and ?action=end from iPhone Shortcuts
-async function handleURLAction() {
-  const params = new URLSearchParams(window.location.search);
-  const action = params.get('action');
-  if (!action) return;
-
-  // Clean the URL so refreshing doesn't re-trigger
-  window.history.replaceState({}, '', '/');
-
-  if (action === 'start') {
-    if (activeSessionId) {
-      showBanner('session already running · ' + fmtHMS(Math.floor((Date.now()-activeStartedAt)/1000)) + ' elapsed');
-    } else {
-      await handleStart('shortcut');
-      showBanner('session started');
-    }
+async function handleURLAction(){
+  const params=new URLSearchParams(window.location.search);
+  const action=params.get('action');
+  if(!action) return;
+  window.history.replaceState({},'','/');
+  if(action==='start'){
+    if(activeSessionId){showBanner('session already running · '+fmtHMS(Math.floor((Date.now()-activeStartedAt)/1000))+' elapsed');}
+    else{await handleStart('shortcut');showBanner('session started');}
   }
-
-  if (action === 'end') {
-    if (activeSessionId) {
-      await handleEnd();
-    } else {
-      showBanner('no active session to end');
-    }
-  }
+  if(action==='end'){activeSessionId?openEndSheet():showBanner('no active session to end');}
 }
 
-function showBanner(msg) {
-  const b = document.getElementById('shortcut-banner');
-  document.getElementById('shortcut-banner-text').textContent = msg;
-  b.style.display = 'flex';
-  setTimeout(() => b.style.display='none', 4000);
+function showBanner(msg){
+  const b=document.getElementById('shortcut-banner');
+  document.getElementById('shortcut-banner-text').textContent=msg;
+  b.style.display='flex';setTimeout(()=>b.style.display='none',4000);
 }
 
 // ── SUMMARY ──
-function showSummary(session) {
-  const todayTotal=todaySessions.reduce((a,s)=>a+s.durationSecs,0);
+function showSummary(session){
+  const total=todaySessions.reduce((a,s)=>a+s.durationSecs,0);
   const longest=Math.max(...todaySessions.map(s=>s.durationSecs),0);
   const goalSecs=currentUser?.goalSecs||18000;
-  const remaining=goalSecs-todayTotal;
   document.getElementById('sum-avatar').textContent=initials(currentUser?.name||'?');
   document.getElementById('sum-dur').textContent=fmtHM(session.durationSecs);
   document.getElementById('sum-meta').textContent='saved · '+fmtDate(session.startedAt)+' · '+fmtTime(session.startedAt)+' – '+fmtTime(session.endedAt);
   document.getElementById('sum-count').textContent=todaySessions.length;
-  document.getElementById('sum-today').textContent=fmtHM(todayTotal);
+  document.getElementById('sum-today').textContent=fmtHM(total);
   document.getElementById('sum-longest').textContent=fmtHM(longest);
-  document.getElementById('sum-insight').innerHTML=remaining>0
-    ?`<strong>${fmtHM(remaining)} left</strong> to reach your ${fmtHM(goalSecs)} goal today.`
-    :`Goal reached. You've studied <strong>${fmtHM(todayTotal)}</strong> today.`;
+  const rem=goalSecs-total;
+  document.getElementById('sum-insight').innerHTML=rem>0?`<strong>${fmtHM(rem)} left</strong> to reach your ${fmtHM(goalSecs)} goal today.`:`Goal reached. You've studied <strong>${fmtHM(total)}</strong> today.`;
   showScreen('screen-summary');
 }
 
-function goToDashboard(){renderDashboard();showScreen('screen-dashboard');}
-async function handleStartAnother(){showScreen('screen-dashboard');renderDashboard();await handleStart('manual');}
+async function handleStartAnother(){switchTab('dashboard');await handleStart('manual');}
 
 // ── DASHBOARD ──
-function renderDashboard() {
+function renderDashboard(){
   if(!currentUser) return;
   const goalSecs=currentUser.goalSecs||18000;
   document.getElementById('nav-avatar').textContent=initials(currentUser.name);
@@ -647,7 +798,7 @@ function renderDashboard() {
   document.getElementById('hero-time').textContent=fmtHM(displayTotal);
   document.getElementById('hero-time').classList.toggle('active',isActive);
   document.getElementById('nav-live').style.display=isActive?'flex':'none';
-  if(goalSecs>0){document.getElementById('goal-bar').style.display='block';document.getElementById('goal-fill').style.width=Math.min(100,Math.round((displayTotal/goalSecs)*100))+'%';}
+  if(goalSecs>0){document.getElementById('goal-bar').style.display='block';document.getElementById('goal-fill').style.width=Math.min(100,Math.round(displayTotal/goalSecs*100))+'%';}
   document.getElementById('idle-state').style.display=isActive?'none':'block';
   document.getElementById('active-state').style.display=isActive?'block':'none';
 
@@ -657,9 +808,7 @@ function renderDashboard() {
     document.getElementById('active-goal-sub').textContent='goal · '+fmtHM(goalSecs);
     document.getElementById('end-btn').disabled=false;
     startTick(goalSecs,todayTotal);
-  } else {
-    clearInterval(tickInterval);
-  }
+  }else{clearInterval(tickInterval);}
 
   document.getElementById('hero-sub').textContent='loading...';
   fetchWeekAndRender(goalSecs,todayTotal,isActive);
@@ -668,49 +817,45 @@ function renderDashboard() {
   const listEl=document.getElementById('sessions-list');
   listEl.innerHTML=sorted.length===0
     ?'<div class="empty-msg">no sessions yet · tap start when you\'re ready</div>'
-    :sorted.map((s,i)=>`<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`).join('');
+    :sorted.map((s,i)=>{
+      const tags=tagsHtml(s.tags);
+      return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''} ${tags?`<div class="sesh-tags">${tags}</div>`:''}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
+    }).join('');
 
   if(todaySessions.length>0&&!isActive){
-    const remaining=goalSecs-todayTotal;
-    document.getElementById('insight-text').innerHTML=remaining>0
-      ?`<strong>${fmtHM(remaining)} left</strong> to reach your ${fmtHM(goalSecs)} goal today.`
-      :`Goal reached. You've studied <strong>${fmtHM(todayTotal)}</strong> today.`;
+    const rem=goalSecs-todayTotal;
+    document.getElementById('insight-text').innerHTML=rem>0?`<strong>${fmtHM(rem)} left</strong> to reach your ${fmtHM(goalSecs)} goal today.`:`Goal reached. You've studied <strong>${fmtHM(todayTotal)}</strong> today.`;
     document.getElementById('insight-block').style.display='block';
-  } else {
-    document.getElementById('insight-block').style.display='none';
-  }
+  }else{document.getElementById('insight-block').style.display='none';}
 }
 
-async function fetchWeekAndRender(goalSecs,todayTotal,isActive) {
-  try {
-    const [weekData,statsData]=await Promise.all([api('GET','/sessions/week'),api('GET','/sessions/stats')]);
-    const sessions=weekData.sessions||[];
-    const stats=statsData;
-    const dayTotals={};
-    sessions.forEach(s=>{const k=dayKey(s.startedAt);dayTotals[k]=(dayTotals[k]||0)+s.durationSecs;});
-    const bestSecs=Math.max(...Object.values(dayTotals),0);
-    document.getElementById('hero-sub').textContent=bestSecs>0?'best day this week · '+fmtHM(bestSecs):'start your first session';
-    document.getElementById('stat-week').textContent=fmtHM(stats.weekTotal||0);
-    document.getElementById('stat-streak').textContent=stats.streak||0;
-    document.getElementById('stat-avg').textContent=stats.avgSession?fmtHM(stats.avgSession):'—';
+async function fetchWeekAndRender(goalSecs,todayTotal,isActive){
+  try{
+    const [wk,st]=await Promise.all([api('GET','/sessions/week'),api('GET','/sessions/stats')]);
+    const sessions=wk.sessions||[];
+    const dayTotals={};sessions.forEach(s=>{const k=dayKey(s.startedAt);dayTotals[k]=(dayTotals[k]||0)+s.durationSecs;});
+    const best=Math.max(...Object.values(dayTotals),0);
+    document.getElementById('hero-sub').textContent=best>0?'best day this week · '+fmtHM(best):'start your first session';
+    document.getElementById('stat-week').textContent=fmtHM(st.weekTotal||0);
+    document.getElementById('stat-streak').textContent=st.streak||0;
+    document.getElementById('stat-avg').textContent=st.avgSession?fmtHM(st.avgSession):'—';
 
-    const wk=[];
-    for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);wk.push(d.toISOString().slice(0,10));}
-    const wkSecs={};wk.forEach(k=>wkSecs[k]=0);
-    sessions.forEach(s=>{const k=dayKey(s.startedAt);if(wkSecs[k]!==undefined)wkSecs[k]+=s.durationSecs;});
-    if(isActive){const tk=todayKey();if(wkSecs[tk]!==undefined)wkSecs[tk]+=Math.floor((Date.now()-activeStartedAt)/1000);}
+    const wkDays=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);wkDays.push(d.toISOString().slice(0,10));}
+    const wkSecs={};wkDays.forEach(k=>wkSecs[k]=0);
+    sessions.forEach(s=>{const k=dayKey(s.startedAt);if(k in wkSecs)wkSecs[k]+=s.durationSecs;});
+    if(isActive){const tk=todayKey();if(tk in wkSecs)wkSecs[tk]+=Math.floor((Date.now()-activeStartedAt)/1000);}
     const maxS=Math.max(...Object.values(wkSecs),1);
     const days=['M','T','W','T','F','S','S'];
     const barsEl=document.getElementById('week-bars');barsEl.innerHTML='';
-    wk.forEach((k,i)=>{
-      const s=wkSecs[k],pct=Math.max(4,Math.round((s/maxS)*100)),isT=k===todayKey();
+    wkDays.forEach((k,i)=>{
+      const s=wkSecs[k],pct=Math.max(4,Math.round(s/maxS*100)),isT=k===todayKey();
       const col=document.createElement('div');col.className='wbar-col';
       const bar=document.createElement('div');bar.className='wbar'+(s>0?(isT?' today':' has'):'');bar.style.height=pct+'%';
       const lbl=document.createElement('div');lbl.className='wday'+(isT?' tl':'');lbl.textContent=days[i];
       col.appendChild(bar);col.appendChild(lbl);barsEl.appendChild(col);
     });
 
-    if(stats.streak>0){
+    if(st.streak>0){
       document.getElementById('streak-section').style.display='block';
       const dotsEl=document.getElementById('streak-dots');dotsEl.innerHTML='';
       for(let i=6;i>=0;i--){
@@ -722,57 +867,190 @@ async function fetchWeekAndRender(goalSecs,todayTotal,isActive) {
         dotsEl.appendChild(dot);
       }
     }
-  } catch{}
+  }catch{}
 }
 
-function startTick(goalSecs,priorSecs) {
+function startTick(goalSecs,priorSecs){
   clearInterval(tickInterval);
   tickInterval=setInterval(()=>{
     if(!activeStartedAt){clearInterval(tickInterval);return;}
-    const sessionSecs=Math.floor((Date.now()-activeStartedAt)/1000);
-    const totalSecs=priorSecs+sessionSecs;
-    document.getElementById('session-timer').textContent=fmtHMS(sessionSecs);
-    document.getElementById('hero-time').textContent=fmtHM(totalSecs);
-    document.getElementById('active-today').textContent=fmtHM(totalSecs);
-    if(goalSecs>0)document.getElementById('goal-fill').style.width=Math.min(100,Math.round((totalSecs/goalSecs)*100))+'%';
+    const ss=Math.floor((Date.now()-activeStartedAt)/1000);
+    const total=priorSecs+ss;
+    document.getElementById('session-timer').textContent=fmtHMS(ss);
+    document.getElementById('hero-time').textContent=fmtHM(total);
+    document.getElementById('active-today').textContent=fmtHM(total);
+    if(goalSecs>0)document.getElementById('goal-fill').style.width=Math.min(100,Math.round(total/goalSecs*100))+'%';
   },1000);
 }
 
+// ── HISTORY ──
+async function loadHistory(reset){
+  if(reset){histPage=1;histTotal=0;histSessions=[];histTag=null;document.getElementById('history-list').innerHTML='';document.getElementById('history-empty').style.display='none';document.getElementById('load-more-btn').style.display='none';renderTagFilters();}
+  try{
+    const tagQ=histTag?'&tag='+encodeURIComponent(histTag):'';
+    const data=await api('GET',`/sessions/history?page=${histPage}&limit=${HIST_LIMIT}${tagQ}`);
+    histTotal=data.total;
+    histSessions=[...histSessions,...(data.sessions||[])];
+    histPage++;
+    renderHistoryList();
+    renderTagFilters();
+    document.getElementById('load-more-btn').style.display=histSessions.length<histTotal?'block':'none';
+    document.getElementById('history-empty').style.display=histSessions.length===0?'block':'none';
+  }catch{}
+}
+
+function loadMoreHistory(){loadHistory(false);}
+
+function renderHistoryList(){
+  const groups={};
+  histSessions.forEach(s=>{const k=dayKey(s.startedAt);if(!groups[k])groups[k]=[];groups[k].push(s);});
+  const container=document.getElementById('history-list');container.innerHTML='';
+  Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(dk=>{
+    const g=document.createElement('div');g.className='history-group';
+    g.innerHTML=`<div class="history-date-label">${fmtDateShort(new Date(dk).getTime()+12*3600*1000)}</div>`;
+    const card=document.createElement('div');card.className='history-card';
+    groups[dk].sort((a,b)=>b.startedAt-a.startedAt).forEach(s=>{
+      const tags=tagsHtml(s.tags);
+      const row=document.createElement('div');row.className='history-row';
+      row.innerHTML=`<div class="history-info"><div class="history-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="history-note">${s.note}</div>`:''} ${tags?`<div class="history-tags">${tags}</div>`:''}</div><div class="history-dur">${fmtHM(s.durationSecs)}</div>`;
+      card.appendChild(row);
+    });
+    g.appendChild(card);container.appendChild(g);
+  });
+}
+
+function renderTagFilters(){
+  const tagSet=new Set();histSessions.forEach(s=>(s.tags||[]).forEach(t=>tagSet.add(t)));
+  const container=document.getElementById('tag-filters');container.innerHTML='';
+  if(tagSet.size===0) return;
+  const all=document.createElement('button');all.className='filter-chip'+(histTag===null?' active':'');all.textContent='all';
+  all.onclick=()=>{histTag=null;loadHistory(true);};container.appendChild(all);
+  [...tagSet].sort().forEach(tag=>{
+    const chip=document.createElement('button');chip.className='filter-chip'+(histTag===tag?' active':'');chip.textContent=tag;
+    chip.onclick=()=>{histTag=tag;loadHistory(true);};container.appendChild(chip);
+  });
+}
+
+async function downloadCSV(){
+  const tok=getToken();if(!tok) return;
+  const res=await fetch(API+'/sessions/export.csv',{headers:{'Authorization':'Bearer '+tok}});
+  const blob=await res.blob();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tracl-sessions.csv';a.click();URL.revokeObjectURL(a.href);
+}
+
+// ── SETTINGS ──
+function renderSettings(){
+  if(!currentUser) return;
+  document.getElementById('disp-name').textContent=currentUser.name;
+  document.getElementById('disp-goal').textContent=fmtGoal(currentUser.goalSecs||18000);
+  document.getElementById('disp-email').textContent=currentUser.email;
+  loadStats();
+}
+
+async function loadStats(){
+  try{
+    const st=await api('GET','/sessions/stats');
+    document.getElementById('st-total').textContent=st.totalSessions||0;
+    document.getElementById('st-hours').textContent=st.totalSessions?fmtHM(Math.round((st.avgSession||0)*(st.totalSessions||0))):'—';
+    document.getElementById('st-streak').textContent=(st.streak||0)+' days';
+    document.getElementById('st-tags').textContent=(st.topTags||[]).map(t=>t.tag).join(', ')||'—';
+  }catch{}
+}
+
+function toggleEdit(field){
+  const wrapId={name:'edit-name-wrap',goal:'edit-goal-wrap',password:'edit-password-wrap'}[field];
+  const wrap=document.getElementById(wrapId);
+  const open=wrap.classList.contains('open');
+  // Close all
+  ['edit-name-wrap','edit-goal-wrap','edit-password-wrap'].forEach(id=>document.getElementById(id).classList.remove('open'));
+  if(!open){
+    wrap.classList.add('open');
+    if(field==='name'){const inp=document.getElementById('edit-name-val');inp.value=currentUser.name;inp.focus();}
+    if(field==='goal'){const inp=document.getElementById('edit-goal-val');inp.value=fmtGoal(currentUser.goalSecs||18000);inp.focus();}
+    if(field==='password') document.getElementById('cur-pw').focus();
+  }
+}
+
+function fieldMsg(id,msg,isErr){const el=document.getElementById(id);el.textContent=msg;el.className='field-msg '+(isErr?'err':'ok');setTimeout(()=>{el.className='field-msg';el.textContent='';},3000);}
+
+async function saveName(){
+  const name=document.getElementById('edit-name-val').value.trim();
+  if(!name) return fieldMsg('name-msg','name cannot be empty',true);
+  try{
+    const u=await api('PATCH','/auth/me',{name});
+    currentUser={...currentUser,...u};
+    document.getElementById('disp-name').textContent=currentUser.name;
+    document.getElementById('nav-avatar').textContent=initials(currentUser.name);
+    document.getElementById('edit-name-wrap').classList.remove('open');
+    showToast('name updated');
+  }catch(err){fieldMsg('name-msg',err.message,true);}
+}
+
+async function saveGoal(){
+  const goalSecs=parseGoalSecs(document.getElementById('edit-goal-val').value);
+  try{
+    const u=await api('PATCH','/auth/me',{goalSecs});
+    currentUser={...currentUser,...u};
+    document.getElementById('disp-goal').textContent=fmtGoal(currentUser.goalSecs);
+    document.getElementById('edit-goal-wrap').classList.remove('open');
+    showToast('goal updated');
+  }catch(err){fieldMsg('goal-msg',err.message,true);}
+}
+
+async function savePassword(){
+  const cur=document.getElementById('cur-pw').value;
+  const next=document.getElementById('new-pw').value;
+  if(!cur||!next) return fieldMsg('pw-msg','fill in both fields',true);
+  if(next.length<6) return fieldMsg('pw-msg','min 6 characters',true);
+  try{
+    await api('POST','/auth/password',{currentPassword:cur,newPassword:next});
+    document.getElementById('cur-pw').value='';document.getElementById('new-pw').value='';
+    document.getElementById('edit-password-wrap').classList.remove('open');
+    showToast('password updated');
+  }catch(err){fieldMsg('pw-msg',err.message,true);}
+}
+
+// ── DELETE ACCOUNT ──
+function openDeleteSheet(){document.getElementById('del-pw').value='';document.getElementById('del-err').classList.remove('show');document.getElementById('del-btn').disabled=false;document.getElementById('delete-sheet').classList.add('open');}
+function closeDeleteSheet(){document.getElementById('delete-sheet').classList.remove('open');}
+async function confirmDelete(){
+  const pw=document.getElementById('del-pw').value;
+  if(!pw){document.getElementById('del-err').textContent='password required';document.getElementById('del-err').classList.add('show');return;}
+  document.getElementById('del-btn').disabled=true;
+  try{await api('DELETE','/auth/me',{password:pw});closeDeleteSheet();handleLogout();}
+  catch(err){document.getElementById('del-err').textContent=err.message;document.getElementById('del-err').classList.add('show');document.getElementById('del-btn').disabled=false;}
+}
+
 // ── NFC ──
-async function initNFC() {
+async function initNFC(){
   if(!('NDEFReader' in window)) return;
-  try {
-    const reader=new NDEFReader();
-    await reader.scan();
+  try{
+    const reader=new NDEFReader();await reader.scan();
     reader.addEventListener('reading',({message})=>{
-      for(const record of message.records){
-        const text=new TextDecoder().decode(record.data);
-        if(text==='tracl-start'&&!activeSessionId)handleStart('nfc');
-        if(text==='tracl-stop'&&activeSessionId)handleEnd();
+      for(const rec of message.records){
+        const text=new TextDecoder().decode(rec.data);
+        if(text==='tracl-start'&&!activeSessionId) handleStart('nfc');
+        if(text==='tracl-stop'&&activeSessionId) openEndSheet();
       }
     });
-  } catch{}
+  }catch{}
 }
 
 // ── BOOT ──
-async function enterApp(user) {
+async function enterApp(user){
   currentUser=user;
   await loadTodaySessions();
   renderDashboard();
   showScreen('screen-dashboard');
-  connectSSEWithToken();
+  connectSSE();
   initNFC();
   await handleURLAction();
 }
 
-(async function boot() {
-  const token=getToken();
-  if(token){
-    try{const user=await api('GET','/auth/me');hideLoading();await enterApp(user);return;}
-    catch{clearToken();}
-  }
-  hideLoading();
-  showScreen('screen-signup');
+(async function boot(){
+  const tok=getToken();
+  if(tok){try{const user=await api('GET','/auth/me');hideLoading();await enterApp(user);return;}catch{clearToken();}}
+  hideLoading();showScreen('screen-signup');
 })();
 </script>
 </body>
