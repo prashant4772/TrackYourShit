@@ -7,7 +7,7 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'tracl-dev-secret-change-in-production';
-const DB_PATH = path.join(__dirname, 'tracl.db.json');
+const DB_PATH = process.env.DATA_PATH || path.join(__dirname, 'tracl.db.json');
 
 // ── DATABASE ──
 function loadDB() {
