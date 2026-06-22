@@ -10,6 +10,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'tracl-dev-secret-change-in-product
 const DB_PATH = process.env.DATA_PATH || path.join(__dirname, 'tracl.db.json');
 const KILL_SWITCH_PASSWORD = process.env.KILL_SWITCH_PASSWORD || '';
 
+const MAX_NAME = 64;
+const MAX_NOTE = 500;
+const MAX_TAG_LEN = 32;
+const MAX_TAGS = 10;
+
 // ── DATABASE ──
 function loadDB() {
   try {
@@ -28,14 +33,12 @@ const q = {
   sessionById: (db, id, userId) => db.sessions.find(s => s.id === id && s.userId === userId),
 };
 
-// ── SSE: per-user connected clients ──
-const clients = new Map(); // userId -> Set of res objects
-
+// ── SSE ──
+const clients = new Map();
 function getClients(userId) {
   if (!clients.has(userId)) clients.set(userId, new Set());
   return clients.get(userId);
 }
-
 function pushToUser(userId, event, data) {
   const conns = clients.get(userId);
   if (!conns) return;
@@ -45,12 +48,33 @@ function pushToUser(userId, event, data) {
   }
 }
 
+// ── RATE LIMITING ──
+const rlMap = new Map();
+function rateLimit(windowMs, max) {
+  return (req, res, next) => {
+    const key = (req.ip || '') + '|' + req.path;
+    const now = Date.now();
+    const entry = rlMap.get(key);
+    if (!entry || now > entry.resetAt) {
+      rlMap.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    entry.count++;
+    if (entry.count > max) return res.status(429).json({ error: 'Too many requests, try again later.' });
+    next();
+  };
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rlMap) if (now > v.resetAt) rlMap.delete(k);
+}, 5 * 60 * 1000);
+
 // ── MIDDLEWARE ──
 app.use(express.json());
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Password');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -80,9 +104,30 @@ function uid() {
 function dayKey(ts) {
   return new Date(ts).toISOString().slice(0, 10);
 }
+function sanitizeTags(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(t => String(t).trim().toLowerCase().slice(0, MAX_TAG_LEN))
+    .filter(t => t.length > 0)
+    .slice(0, MAX_TAGS);
+}
+function fmtSession(s) {
+  return { id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, durationSecs: s.durationSecs, method: s.method, note: s.note, tags: s.tags || [] };
+}
+function checkAdminPassword(req, res) {
+  if (!KILL_SWITCH_PASSWORD) { res.status(503).json({ error: 'Admin not configured (set KILL_SWITCH_PASSWORD).' }); return false; }
+  const pw = req.headers['x-admin-password'] || req.body?.password || req.query.password;
+  if (!pw) { res.status(401).json({ error: 'Password required.' }); return false; }
+  const provided = Buffer.from(String(pw));
+  const expected = Buffer.from(KILL_SWITCH_PASSWORD);
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+    res.status(403).json({ error: 'Incorrect password.' });
+    return false;
+  }
+  return true;
+}
 
 // ── SSE ENDPOINT ──
-// EventSource can't send headers, so we accept token via query param too
 app.get('/events', (req, res) => {
   const token = req.headers.authorization?.slice(7) || req.query.token;
   if (!token) return res.status(401).end();
@@ -96,14 +141,12 @@ app.get('/events', (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  // Send a heartbeat every 25s to keep the connection alive through proxies
   const heartbeat = setInterval(() => {
     try { res.write(': ping\n\n'); } catch {}
   }, 25000);
 
   const userClients = getClients(req.userId);
   userClients.add(res);
-
   req.on('close', () => {
     clearInterval(heartbeat);
     userClients.delete(res);
@@ -111,10 +154,15 @@ app.get('/events', (req, res) => {
 });
 
 // ── AUTH ──
-app.post('/auth/signup', (req, res) => {
+const authLimiter = rateLimit(15 * 60 * 1000, 10);
+
+app.post('/auth/signup', authLimiter, (req, res) => {
   const { name, email, password, goalSecs } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'name, email and password required' });
+  if (typeof name !== 'string' || name.trim().length === 0) return res.status(400).json({ error: 'invalid name' });
+  if (name.trim().length > MAX_NAME) return res.status(400).json({ error: `name must be ${MAX_NAME} characters or fewer` });
   if (password.length < 6) return res.status(400).json({ error: 'password must be at least 6 characters' });
+  if (password.length > 128) return res.status(400).json({ error: 'password too long' });
   if (!email.includes('@')) return res.status(400).json({ error: 'invalid email' });
 
   const db = loadDB();
@@ -122,26 +170,24 @@ app.post('/auth/signup', (req, res) => {
 
   const user = {
     id: uid(),
-    name: name.trim(),
-    email: email.toLowerCase().trim(),
+    name: name.trim().slice(0, MAX_NAME),
+    email: email.toLowerCase().trim().slice(0, 254),
     passHash: hashPass(password),
-    goalSecs: goalSecs || 18000,
+    goalSecs: typeof goalSecs === 'number' && goalSecs > 0 ? goalSecs : 18000,
     createdAt: Date.now()
   };
   db.users.push(user);
   saveDB(db);
-
   res.json({ token: makeToken(user.id), user: { id: user.id, name: user.name, email: user.email, goalSecs: user.goalSecs } });
 });
 
-app.post('/auth/login', (req, res) => {
+app.post('/auth/login', authLimiter, (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
 
   const db = loadDB();
   const user = q.userByEmail(db, email.toLowerCase().trim());
   if (!user || user.passHash !== hashPass(password)) return res.status(401).json({ error: 'incorrect email or password' });
-
   res.json({ token: makeToken(user.id), user: { id: user.id, name: user.name, email: user.email, goalSecs: user.goalSecs } });
 });
 
@@ -150,6 +196,57 @@ app.get('/auth/me', requireAuth, (req, res) => {
   const user = q.userById(db, req.userId);
   if (!user) return res.status(404).json({ error: 'user not found' });
   res.json({ id: user.id, name: user.name, email: user.email, goalSecs: user.goalSecs });
+});
+
+app.patch('/auth/me', requireAuth, (req, res) => {
+  const { name, goalSecs } = req.body;
+  const db = loadDB();
+  const user = q.userById(db, req.userId);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || name.trim().length === 0) return res.status(400).json({ error: 'invalid name' });
+    if (name.trim().length > MAX_NAME) return res.status(400).json({ error: `name must be ${MAX_NAME} characters or fewer` });
+    user.name = name.trim();
+  }
+  if (goalSecs !== undefined) {
+    if (typeof goalSecs !== 'number' || goalSecs <= 0) return res.status(400).json({ error: 'goalSecs must be a positive number' });
+    user.goalSecs = goalSecs;
+  }
+  saveDB(db);
+  res.json({ id: user.id, name: user.name, email: user.email, goalSecs: user.goalSecs });
+});
+
+app.post('/auth/password', requireAuth, rateLimit(60 * 60 * 1000, 5), (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword required' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'new password must be at least 6 characters' });
+  if (newPassword.length > 128) return res.status(400).json({ error: 'new password too long' });
+
+  const db = loadDB();
+  const user = q.userById(db, req.userId);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+  if (user.passHash !== hashPass(currentPassword)) return res.status(403).json({ error: 'current password is incorrect' });
+
+  user.passHash = hashPass(newPassword);
+  saveDB(db);
+  res.json({ ok: true });
+});
+
+app.delete('/auth/me', requireAuth, (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'password required to delete account' });
+
+  const db = loadDB();
+  const user = q.userById(db, req.userId);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+  if (user.passHash !== hashPass(password)) return res.status(403).json({ error: 'incorrect password' });
+
+  db.users = db.users.filter(u => u.id !== req.userId);
+  db.sessions = db.sessions.filter(s => s.userId !== req.userId);
+  saveDB(db);
+  clients.delete(req.userId);
+  res.json({ ok: true });
 });
 
 // ── SESSIONS ──
@@ -166,19 +263,17 @@ app.post('/sessions/start', requireAuth, (req, res) => {
     durationSecs: null,
     method: req.body.method || 'manual',
     note: null,
+    tags: sanitizeTags(req.body.tags),
     createdAt: Date.now()
   };
   db.sessions.push(session);
   saveDB(db);
-
-  // Push to all other tabs
   pushToUser(req.userId, 'session:start', { sessionId: session.id, startedAt: session.startedAt, method: session.method });
-
   res.json({ sessionId: session.id, startedAt: session.startedAt });
 });
 
 app.post('/sessions/end', requireAuth, (req, res) => {
-  const { sessionId, note } = req.body;
+  const { sessionId, note, tags } = req.body;
   const db = loadDB();
   const session = q.sessionById(db, sessionId, req.userId);
   if (!session) return res.status(404).json({ error: 'session not found' });
@@ -196,35 +291,103 @@ app.post('/sessions/end', requireAuth, (req, res) => {
 
   session.endedAt = now;
   session.durationSecs = durationSecs;
-  session.note = note || null;
+  session.note = note ? String(note).slice(0, MAX_NOTE) : null;
+  if (tags !== undefined) session.tags = sanitizeTags(tags);
   saveDB(db);
-
-  // Push session end to all other tabs — they will show the summary
   pushToUser(req.userId, 'session:end', { sessionId, startedAt: session.startedAt, endedAt: now, durationSecs });
-
   res.json({ sessionId, startedAt: session.startedAt, endedAt: now, durationSecs });
+});
+
+app.post('/sessions/log', requireAuth, (req, res) => {
+  const { startedAt, endedAt, note, tags, method } = req.body;
+  if (!startedAt || !endedAt) return res.status(400).json({ error: 'startedAt and endedAt required' });
+  if (typeof startedAt !== 'number' || typeof endedAt !== 'number') return res.status(400).json({ error: 'startedAt and endedAt must be ms timestamps' });
+  if (endedAt <= startedAt) return res.status(400).json({ error: 'endedAt must be after startedAt' });
+
+  const durationSecs = Math.floor((endedAt - startedAt) / 1000);
+  if (durationSecs < 30) return res.status(400).json({ error: 'session must be at least 30 seconds' });
+  if (durationSecs > 86400) return res.status(400).json({ error: 'session cannot exceed 24 hours' });
+
+  const db = loadDB();
+  const session = {
+    id: uid(),
+    userId: req.userId,
+    startedAt,
+    endedAt,
+    durationSecs,
+    method: method || 'manual',
+    note: note ? String(note).slice(0, MAX_NOTE) : null,
+    tags: sanitizeTags(tags),
+    createdAt: Date.now()
+  };
+  db.sessions.push(session);
+  saveDB(db);
+  res.status(201).json(fmtSession(session));
+});
+
+app.patch('/sessions/:id', requireAuth, (req, res) => {
+  const { note, tags } = req.body;
+  const db = loadDB();
+  const session = q.sessionById(db, req.params.id, req.userId);
+  if (!session) return res.status(404).json({ error: 'session not found' });
+  if (!session.endedAt) return res.status(409).json({ error: 'cannot edit an active session' });
+
+  if (note !== undefined) session.note = note ? String(note).slice(0, MAX_NOTE) : null;
+  if (tags !== undefined) session.tags = sanitizeTags(tags);
+  saveDB(db);
+  res.json(fmtSession(session));
 });
 
 app.get('/sessions/today', requireAuth, (req, res) => {
   const db = loadDB();
+  const user = q.userById(db, req.userId);
   const today = dayKey(Date.now());
   const all = q.sessionsByUser(db, req.userId);
   const sessions = all
     .filter(s => s.endedAt && dayKey(s.startedAt) === today)
     .sort((a, b) => b.startedAt - a.startedAt)
-    .map(({ id, startedAt, endedAt, durationSecs, method, note }) => ({ id, startedAt, endedAt, durationSecs, method, note }));
+    .map(fmtSession);
+  const totalSecs = sessions.reduce((acc, s) => acc + s.durationSecs, 0);
+  const goalSecs = user?.goalSecs || 18000;
   const open = q.openSession(db, req.userId);
-  res.json({ sessions, activeSession: open ? { id: open.id, started_at: open.startedAt, method: open.method } : null });
+  res.json({
+    sessions,
+    activeSession: open ? { id: open.id, started_at: open.startedAt, method: open.method } : null,
+    progress: { totalSecs, goalSecs, percent: Math.min(100, Math.round((totalSecs / goalSecs) * 100)) }
+  });
 });
 
 app.get('/sessions/week', requireAuth, (req, res) => {
   const db = loadDB();
+  const user = q.userById(db, req.userId);
   const sevenAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const sessions = q.sessionsByUser(db, req.userId)
     .filter(s => s.endedAt && s.startedAt >= sevenAgo)
     .sort((a, b) => b.startedAt - a.startedAt)
-    .map(({ id, startedAt, endedAt, durationSecs, method }) => ({ id, startedAt, endedAt, durationSecs, method }));
-  res.json({ sessions });
+    .map(fmtSession);
+  const totalSecs = sessions.reduce((acc, s) => acc + s.durationSecs, 0);
+  const goalSecs = user?.goalSecs || 18000;
+  res.json({
+    sessions,
+    progress: { totalSecs, goalSecs: goalSecs * 7, percent: Math.min(100, Math.round((totalSecs / (goalSecs * 7)) * 100)) }
+  });
+});
+
+app.get('/sessions/history', requireAuth, (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+  const tag = req.query.tag ? String(req.query.tag).toLowerCase() : null;
+
+  const db = loadDB();
+  let all = q.sessionsByUser(db, req.userId)
+    .filter(s => s.endedAt)
+    .sort((a, b) => b.startedAt - a.startedAt);
+
+  if (tag) all = all.filter(s => (s.tags || []).includes(tag));
+
+  const total = all.length;
+  const sessions = all.slice((page - 1) * limit, page * limit).map(fmtSession);
+  res.json({ sessions, total, page, limit, pages: Math.ceil(total / limit) });
 });
 
 app.get('/sessions/stats', requireAuth, (req, res) => {
@@ -243,7 +406,36 @@ app.get('/sessions/stats', requireAuth, (req, res) => {
   const weekTotal = all.filter(s => s.startedAt >= sevenAgo).reduce((a, s) => a + s.durationSecs, 0);
   const avg = all.length > 0 ? Math.round(all.reduce((a, s) => a + s.durationSecs, 0) / all.length) : 0;
 
-  res.json({ streak, weekTotal, avgSession: avg, totalSessions: all.length });
+  const tagCounts = {};
+  for (const s of all) for (const t of (s.tags || [])) tagCounts[t] = (tagCounts[t] || 0) + 1;
+  const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([tag, count]) => ({ tag, count }));
+
+  res.json({ streak, weekTotal, avgSession: avg, totalSessions: all.length, topTags });
+});
+
+app.get('/sessions/export.csv', requireAuth, (req, res) => {
+  const db = loadDB();
+  const sessions = q.sessionsByUser(db, req.userId)
+    .filter(s => s.endedAt)
+    .sort((a, b) => a.startedAt - b.startedAt);
+
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['id', 'startedAt', 'endedAt', 'durationSecs', 'method', 'note', 'tags'].join(',')];
+  for (const s of sessions) {
+    rows.push([
+      esc(s.id),
+      esc(new Date(s.startedAt).toISOString()),
+      esc(new Date(s.endedAt).toISOString()),
+      s.durationSecs,
+      esc(s.method),
+      esc(s.note || ''),
+      esc((s.tags || []).join(';'))
+    ].join(','));
+  }
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="tracl-sessions.csv"');
+  res.send(rows.join('\n'));
 });
 
 // ── KILL SWITCH ──
@@ -300,19 +492,26 @@ app.get('/admin/reset', (_req, res) => {
 });
 
 app.post('/admin/reset', (req, res) => {
-  if (!KILL_SWITCH_PASSWORD) return res.status(503).json({ error: 'Kill switch not configured (set KILL_SWITCH_PASSWORD).' });
-  const { password } = req.body;
-  if (!password) return res.status(400).json({ error: 'Password required.' });
-
-  const provided = Buffer.from(String(password));
-  const expected = Buffer.from(KILL_SWITCH_PASSWORD);
-  const valid = provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
-  if (!valid) return res.status(403).json({ error: 'Incorrect password.' });
-
+  if (!checkAdminPassword(req, res)) return;
   saveDB({ users: [], sessions: [] });
   clients.clear();
   console.log(`[kill-switch] database wiped at ${new Date().toISOString()}`);
   res.json({ message: 'All data erased.' });
+});
+
+// ── ADMIN STATS ──
+app.get('/admin/stats', (req, res) => {
+  if (!checkAdminPassword(req, res)) return;
+  const db = loadDB();
+  const completed = db.sessions.filter(s => s.endedAt);
+  const totalSecs = completed.reduce((a, s) => a + s.durationSecs, 0);
+  res.json({
+    users: db.users.length,
+    sessions: completed.length,
+    activeSessions: db.sessions.filter(s => !s.endedAt).length,
+    totalHours: Math.round(totalSecs / 3600 * 10) / 10,
+    connectedClients: [...clients.values()].reduce((a, s) => a + s.size, 0)
+  });
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true, time: Date.now() }));
