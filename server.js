@@ -8,6 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'tracl-dev-secret-change-in-production';
 const DB_PATH = process.env.DATA_PATH || path.join(__dirname, 'tracl.db.json');
+const KILL_SWITCH_PASSWORD = process.env.KILL_SWITCH_PASSWORD || '';
 
 // ── DATABASE ──
 function loadDB() {
@@ -245,6 +246,75 @@ app.get('/sessions/stats', requireAuth, (req, res) => {
   res.json({ streak, weekTotal, avgSession: avg, totalSessions: all.length });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, time: Date.now() }));
+// ── KILL SWITCH ──
+app.get('/admin/reset', (_req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Database</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f0f0f; font-family: system-ui, sans-serif; color: #e0e0e0; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 2rem; width: 100%; max-width: 380px; }
+    h1 { font-size: 1.1rem; margin-bottom: 0.4rem; color: #fff; }
+    p { font-size: 0.85rem; color: #888; margin-bottom: 1.5rem; }
+    input { width: 100%; padding: 0.65rem 0.9rem; background: #0f0f0f; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 0.95rem; margin-bottom: 1rem; outline: none; }
+    input:focus { border-color: #e55; }
+    button { width: 100%; padding: 0.7rem; background: #c0392b; border: none; border-radius: 8px; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+    button:hover { background: #e74c3c; }
+    .msg { margin-top: 1rem; font-size: 0.85rem; text-align: center; }
+    .err { color: #e55; } .ok { color: #5c5; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Reset Database</h1>
+    <p>This will permanently erase all users and sessions.</p>
+    <form id="f">
+      <input type="password" id="pw" placeholder="Kill switch password" required autocomplete="off">
+      <button type="submit">Erase All Data</button>
+    </form>
+    <div class="msg" id="msg"></div>
+  </div>
+  <script>
+    document.getElementById('f').addEventListener('submit', async e => {
+      e.preventDefault();
+      const msg = document.getElementById('msg');
+      msg.textContent = '';
+      try {
+        const r = await fetch('/admin/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: document.getElementById('pw').value })
+        });
+        const d = await r.json();
+        if (r.ok) { msg.className = 'msg ok'; msg.textContent = d.message; document.getElementById('pw').value = ''; }
+        else { msg.className = 'msg err'; msg.textContent = d.error; }
+      } catch { msg.className = 'msg err'; msg.textContent = 'Request failed.'; }
+    });
+  </script>
+</body>
+</html>`);
+});
+
+app.post('/admin/reset', (req, res) => {
+  if (!KILL_SWITCH_PASSWORD) return res.status(503).json({ error: 'Kill switch not configured (set KILL_SWITCH_PASSWORD).' });
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password required.' });
+
+  const provided = Buffer.from(String(password));
+  const expected = Buffer.from(KILL_SWITCH_PASSWORD);
+  const valid = provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
+  if (!valid) return res.status(403).json({ error: 'Incorrect password.' });
+
+  saveDB({ users: [], sessions: [] });
+  clients.clear();
+  console.log(`[kill-switch] database wiped at ${new Date().toISOString()}`);
+  res.json({ message: 'All data erased.' });
+});
+
+app.get('/health', (_req, res) => res.json({ ok: true, time: Date.now() }));
 
 app.listen(PORT, '0.0.0.0', () => console.log(`tracl running on port ${PORT}`));
