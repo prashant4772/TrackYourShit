@@ -252,6 +252,31 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 @media (prefers-reduced-motion:reduce) { .live-dot,.loading-logo{animation:none;opacity:.5} }
 /* FOOTER */
 .app-footer{text-align:center;font-size:10px;color:var(--text-3);padding:1.5rem 0 .5rem;letter-spacing:.2px;}
+/* MODE SWITCHER */
+.mode-switch{display:flex;background:var(--surface);border:.5px solid var(--border);border-radius:99px;padding:3px;margin-bottom:1.25rem;}
+.mode-tab{flex:1;padding:7px 0;border:none;border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text-2);background:transparent;transition:all .2s;}
+.mode-tab.active{background:var(--purple);color:#fff;}
+/* Work mode blue accent — applied via .work-mode class on #screen-dashboard */
+#screen-dashboard.work-mode .mode-tab.active{background:#2563EB;}
+#screen-dashboard.work-mode .hero-time.active{color:#2563EB;}
+#screen-dashboard.work-mode .live-pill{background:#EFF6FF;color:#1D4ED8;}
+#screen-dashboard.work-mode .live-dot{background:#60A5FA;}
+#screen-dashboard.work-mode .start-core{background:#2563EB;}
+#screen-dashboard.work-mode .session-timer{color:#2563EB;}
+#screen-dashboard.work-mode .wbar.today{background:#2563EB;}
+#screen-dashboard.work-mode .wbar.has{background:#93C5FD;}
+@media (prefers-color-scheme:dark){
+  #screen-dashboard.work-mode .live-pill{background:#1E2F4F;color:#93C5FD;}
+}
+/* TYPE PILL (history) */
+.type-pill{font-size:10px;padding:1px 6px;border-radius:99px;font-weight:500;display:inline-block;}
+.type-pill.work{background:#EFF6FF;color:#2563EB;}
+@media (prefers-color-scheme:dark){.type-pill.work{background:#1E2F4F;color:#93C5FD;}}
+/* HISTORY TYPE FILTER */
+.type-filter{display:flex;background:var(--surface);border:.5px solid var(--border);border-radius:99px;padding:3px;margin-bottom:.75rem;}
+.type-btn{flex:1;padding:6px 0;border:none;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text-2);background:transparent;transition:all .15s;}
+.type-btn.active{background:var(--purple);color:#fff;}
+.type-btn.active-work{background:#2563EB;color:#fff;}
 /* PULL TO REFRESH */
 .ptr-ind{position:fixed;top:-52px;left:50%;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;background:var(--surface);border:.5px solid var(--border);display:flex;align-items:center;justify-content:center;z-index:20;transition:top .25s ease;box-shadow:0 2px 8px rgba(0,0,0,.1);pointer-events:none;}
 .ptr-ind svg{width:18px;height:18px;stroke:var(--purple);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;}
@@ -355,6 +380,10 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     </div>
   </nav>
   <div class="app-body">
+    <div class="mode-switch">
+      <button class="mode-tab active" id="mode-tab-study" onclick="switchMode('study')">Study</button>
+      <button class="mode-tab" id="mode-tab-work" onclick="switchMode('work')">Work</button>
+    </div>
     <div id="shortcut-banner" style="display:none" class="shortcut-banner">
       <div class="shortcut-banner-text" id="shortcut-banner-text"></div>
       <button class="shortcut-banner-close" onclick="this.closest('.shortcut-banner').style.display='none'">×</button>
@@ -430,6 +459,11 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     </div>
   </nav>
   <div class="app-body">
+    <div class="type-filter">
+      <button class="type-btn active" id="type-btn-all" onclick="setHistType(null)">All</button>
+      <button class="type-btn" id="type-btn-study" onclick="setHistType('study')">Study</button>
+      <button class="type-btn" id="type-btn-work" onclick="setHistType('work')">Work</button>
+    </div>
     <div class="history-filter" id="tag-filters"></div>
     <div id="history-list"></div>
     <div class="empty-msg" id="history-empty" style="display:none;padding:3rem 0">no sessions yet</div>
@@ -611,10 +645,11 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 const API = (window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
 
 // ── STATE ──
-let currentUser=null, activeSessionId=null, activeStartedAt=null;
-let priorTodaySecs=0, todaySessions=[], tickInterval=null, sseSource=null;
+let currentUser=null, activeSessionId=null, activeStartedAt=null, activeSessionType='study';
+let todaySessions=[], tickInterval=null, sseSource=null;
+let currentMode='study'; // 'study' | 'work'
 let endTags=[];
-let histPage=1, histTotal=0, histTag=null, histSessions=[];
+let histPage=1, histTotal=0, histTag=null, histType=null, histSessions=[];
 const HIST_LIMIT=20;
 
 const TOKEN_KEY='tracl_token';
@@ -668,7 +703,12 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ── TABS ──
 function switchTab(tab){
   if(tab==='dashboard'){renderDashboard();showScreen('screen-dashboard');}
-  else if(tab==='history'){histTag=null;loadHistory(true);showScreen('screen-history');}
+  else if(tab==='history'){
+    histTag=null;histType=null;
+    ['all','study','work'].forEach(t=>{const b=document.getElementById('type-btn-'+t);if(b){b.classList.remove('active','active-work');}});
+    document.getElementById('type-btn-all').classList.add('active');
+    loadHistory(true);showScreen('screen-history');
+  }
   else if(tab==='settings'){renderSettings();showScreen('screen-settings');}
 }
 
@@ -679,15 +719,20 @@ function connectSSE(){
   sseSource=new EventSource(API+'/events?token='+encodeURIComponent(tok));
   sseSource.addEventListener('session:start',e=>{
     const d=JSON.parse(e.data);
-    if(!activeSessionId){activeSessionId=d.sessionId;activeStartedAt=d.startedAt;priorTodaySecs=todaySessions.reduce((a,s)=>a+s.durationSecs,0);renderDashboard();showToast('session started on another device');}
+    if(!activeSessionId){
+      activeSessionId=d.sessionId;activeStartedAt=d.startedAt;
+      activeSessionType=d.type||'study';
+      if(currentMode!==activeSessionType){currentMode=activeSessionType;updateModeTabs();}
+      renderDashboard();showToast('session started on another device');
+    }
   });
   sseSource.addEventListener('session:end',async e=>{
     const d=JSON.parse(e.data);
-    if(activeSessionId===d.sessionId){clearInterval(tickInterval);activeSessionId=null;activeStartedAt=null;await loadTodaySessions();renderDashboard();showToast('session ended · synced');}
+    if(activeSessionId===d.sessionId){clearInterval(tickInterval);activeSessionId=null;activeStartedAt=null;activeSessionType='study';await loadTodaySessions();renderDashboard();showToast('session ended · synced');}
   });
   sseSource.addEventListener('session:discard',e=>{
     const d=JSON.parse(e.data);
-    if(activeSessionId===d.sessionId){clearInterval(tickInterval);activeSessionId=null;activeStartedAt=null;renderDashboard();}
+    if(activeSessionId===d.sessionId){clearInterval(tickInterval);activeSessionId=null;activeStartedAt=null;activeSessionType='study';renderDashboard();}
   });
   sseSource.onerror=()=>setTimeout(connectSSE,3000);
 }
@@ -738,9 +783,8 @@ function handleLogout(){
 async function handleStart(method){
   if(activeSessionId) return;
   try{
-    const data=await api('POST','/sessions/start',{method:method||'manual'});
-    activeSessionId=data.sessionId;activeStartedAt=data.startedAt;
-    priorTodaySecs=todaySessions.reduce((a,s)=>a+s.durationSecs,0);
+    const data=await api('POST','/sessions/start',{method:method||'manual',type:currentMode});
+    activeSessionId=data.sessionId;activeStartedAt=data.startedAt;activeSessionType=currentMode;
     renderDashboard();
   }catch(err){
     if(err.message&&err.message.includes('already active')){await loadTodaySessions();renderDashboard();}
@@ -823,7 +867,11 @@ async function loadTodaySessions(){
   try{
     const data=await api('GET','/sessions/today');
     todaySessions=data.sessions||[];
-    if(data.activeSession&&!activeSessionId){activeSessionId=data.activeSession.id;activeStartedAt=data.activeSession.started_at;priorTodaySecs=todaySessions.reduce((a,s)=>a+s.durationSecs,0);}
+    if(data.activeSession&&!activeSessionId){
+      activeSessionId=data.activeSession.id;activeStartedAt=data.activeSession.started_at;
+      activeSessionType=data.activeSession.type||'study';
+      if(currentMode!==activeSessionType){currentMode=activeSessionType;updateModeTabs();}
+    }
   }catch{todaySessions=[];}
 }
 
@@ -867,50 +915,72 @@ async function handleStartAnother(){switchTab('dashboard');await handleStart('ma
 // ── DASHBOARD ──
 function renderDashboard(){
   if(!currentUser) return;
+  const isWork=currentMode==='work';
   const goalSecs=currentUser.goalSecs||18000;
   document.getElementById('nav-avatar').textContent=initials(currentUser.name);
-  const todayTotal=todaySessions.reduce((a,s)=>a+s.durationSecs,0);
-  const isActive=!!activeSessionId;
+
+  const modeSessions=todaySessions.filter(s=>(s.type||'study')===currentMode);
+  const todayTotal=modeSessions.reduce((a,s)=>a+s.durationSecs,0);
+  const isActive=!!activeSessionId&&activeSessionType===currentMode;
+  const wrongModeActive=!!activeSessionId&&activeSessionType!==currentMode;
   const sessionSecs=isActive?Math.floor((Date.now()-activeStartedAt)/1000):0;
   const displayTotal=todayTotal+sessionSecs;
 
   document.getElementById('hero-time').textContent=fmtHM(displayTotal);
   document.getElementById('hero-time').classList.toggle('active',isActive);
   document.getElementById('nav-live').style.display=isActive?'flex':'none';
-  if(goalSecs>0){document.getElementById('goal-bar').style.display='block';document.getElementById('goal-fill').style.width=Math.min(100,Math.round(displayTotal/goalSecs*100))+'%';}
+  if(!isWork&&goalSecs>0){document.getElementById('goal-bar').style.display='block';document.getElementById('goal-fill').style.width=Math.min(100,Math.round(displayTotal/goalSecs*100))+'%';}
+  else{document.getElementById('goal-bar').style.display='none';}
   document.getElementById('idle-state').style.display=isActive?'none':'block';
   document.getElementById('active-state').style.display=isActive?'block':'none';
+
+  if(!isActive){
+    const ring=document.querySelector('#idle-state .start-ring');
+    const hint=document.querySelector('#idle-state .hint-text');
+    if(wrongModeActive){
+      ring.style.opacity='0.35';ring.style.pointerEvents='none';
+      hint.textContent=activeSessionType+' session in progress · end it first';
+    }else{
+      ring.style.opacity='';ring.style.pointerEvents='';
+      hint.textContent=isWork?'tap to begin a work session':'tap to begin · or place phone in dock';
+    }
+  }
 
   if(isActive){
     document.getElementById('active-start-time').textContent=fmtTime(activeStartedAt);
     document.getElementById('active-today').textContent=fmtHM(displayTotal);
-    document.getElementById('active-goal-sub').textContent='goal · '+fmtHM(goalSecs);
+    document.getElementById('active-goal-sub').textContent=isWork?'tracking':'goal · '+fmtHM(goalSecs);
     document.getElementById('end-btn').disabled=false;
-    startTick(goalSecs,todayTotal);
+    startTick(isWork?0:goalSecs,todayTotal);
   }else{clearInterval(tickInterval);}
 
   document.getElementById('hero-sub').textContent='loading...';
-  fetchWeekAndRender(goalSecs,todayTotal,isActive);
+  fetchWeekAndRender(isWork?0:goalSecs,todayTotal,isActive);
 
-  const sorted=[...todaySessions].sort((a,b)=>b.startedAt-a.startedAt);
+  const sorted=[...modeSessions].sort((a,b)=>b.startedAt-a.startedAt);
   const listEl=document.getElementById('sessions-list');
+  const emptyMsg=isWork?'no work sessions yet · tap start when you\'re ready':'no sessions yet · tap start when you\'re ready';
   listEl.innerHTML=sorted.length===0
-    ?'<div class="empty-msg">no sessions yet · tap start when you\'re ready</div>'
+    ?`<div class="empty-msg">${emptyMsg}</div>`
     :sorted.map((s,i)=>{
       const tags=tagsHtml(s.tags);
       return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''} ${tags?`<div class="sesh-tags">${tags}</div>`:''}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
     }).join('');
 
-  if(todaySessions.length>0&&!isActive){
-    const rem=goalSecs-todayTotal;
-    document.getElementById('insight-text').innerHTML=rem>0?`<strong>${fmtHM(rem)} left</strong> to reach your ${fmtHM(goalSecs)} goal today.`:`Goal reached. You've studied <strong>${fmtHM(todayTotal)}</strong> today.`;
+  if(modeSessions.length>0&&!isActive){
+    if(isWork){
+      document.getElementById('insight-text').innerHTML=`You've worked <strong>${fmtHM(todayTotal)}</strong> today.`;
+    }else{
+      const rem=goalSecs-todayTotal;
+      document.getElementById('insight-text').innerHTML=rem>0?`<strong>${fmtHM(rem)} left</strong> to reach your ${fmtHM(goalSecs)} goal today.`:`Goal reached. You've studied <strong>${fmtHM(todayTotal)}</strong> today.`;
+    }
     document.getElementById('insight-block').style.display='block';
   }else{document.getElementById('insight-block').style.display='none';}
 }
 
 async function fetchWeekAndRender(goalSecs,todayTotal,isActive){
   try{
-    const [wk,st]=await Promise.all([api('GET','/sessions/week'),api('GET','/sessions/stats')]);
+    const [wk,st]=await Promise.all([api('GET',`/sessions/week?type=${currentMode}`),api('GET',`/sessions/stats?type=${currentMode}`)]);
     const sessions=wk.sessions||[];
     const dayTotals={};sessions.forEach(s=>{const k=dayKey(s.startedAt);dayTotals[k]=(dayTotals[k]||0)+s.durationSecs;});
     const best=Math.max(...Object.values(dayTotals),0);
@@ -958,7 +1028,7 @@ function startTick(goalSecs,priorSecs){
     document.getElementById('session-timer').textContent=fmtHMS(ss);
     document.getElementById('hero-time').textContent=fmtHM(total);
     document.getElementById('active-today').textContent=fmtHM(total);
-    if(goalSecs>0)document.getElementById('goal-fill').style.width=Math.min(100,Math.round(total/goalSecs*100))+'%';
+    if(goalSecs>0&&currentMode==='study')document.getElementById('goal-fill').style.width=Math.min(100,Math.round(total/goalSecs*100))+'%';
   },1000);
 }
 
@@ -967,7 +1037,8 @@ async function loadHistory(reset){
   if(reset){histPage=1;histTotal=0;histSessions=[];document.getElementById('history-list').innerHTML='';document.getElementById('history-empty').style.display='none';document.getElementById('load-more-btn').style.display='none';renderTagFilters();}
   try{
     const tagQ=histTag?'&tag='+encodeURIComponent(histTag):'';
-    const data=await api('GET',`/sessions/history?page=${histPage}&limit=${HIST_LIMIT}${tagQ}`);
+    const typeQ=histType?'&type='+histType:'';
+    const data=await api('GET',`/sessions/history?page=${histPage}&limit=${HIST_LIMIT}${tagQ}${typeQ}`);
     histTotal=data.total;
     histSessions=[...histSessions,...(data.sessions||[])];
     histPage++;
@@ -990,8 +1061,9 @@ function renderHistoryList(){
     const card=document.createElement('div');card.className='history-card';
     groups[dk].sort((a,b)=>b.startedAt-a.startedAt).forEach(s=>{
       const tags=tagsHtml(s.tags);
+      const workPill=histType===null&&(s.type||'study')==='work'?'<span class="type-pill work">work</span>':'';
       const row=document.createElement('div');row.className='history-row';
-      row.innerHTML=`<div class="history-info"><div class="history-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="history-note">${s.note}</div>`:''} ${tags?`<div class="history-tags">${tags}</div>`:''}</div><div class="history-dur">${fmtHM(s.durationSecs)}</div>`;
+      row.innerHTML=`<div class="history-info"><div class="history-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="history-note">${s.note}</div>`:''} ${workPill||tags?`<div class="history-tags">${workPill}${tags}</div>`:''}</div><div class="history-dur">${fmtHM(s.durationSecs)}</div>`;
       card.appendChild(row);
     });
     g.appendChild(card);container.appendChild(g);
@@ -1205,6 +1277,33 @@ async function sendTestNotif(){
     await api('POST','/notifications/test');
     showToast('test notification sent!');
   }catch(err){showToast(err.message);}
+}
+
+// ── MODE ──
+function updateModeTabs(){
+  const isWork=currentMode==='work';
+  document.getElementById('mode-tab-study').classList.toggle('active',!isWork);
+  document.getElementById('mode-tab-work').classList.toggle('active',isWork);
+  document.getElementById('screen-dashboard').classList.toggle('work-mode',isWork);
+}
+
+function switchMode(mode){
+  if(currentMode===mode) return;
+  currentMode=mode;
+  updateModeTabs();
+  renderDashboard();
+}
+
+function setHistType(type){
+  histType=type;
+  ['all','study','work'].forEach(t=>{
+    const b=document.getElementById('type-btn-'+t);
+    if(b){b.classList.remove('active','active-work');}
+  });
+  if(type===null) document.getElementById('type-btn-all').classList.add('active');
+  else if(type==='study') document.getElementById('type-btn-study').classList.add('active');
+  else document.getElementById('type-btn-work').classList.add('active-work');
+  loadHistory(true);
 }
 
 // ── NFC ──

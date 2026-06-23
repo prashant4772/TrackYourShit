@@ -113,7 +113,7 @@ function sanitizeTags(raw) {
     .slice(0, MAX_TAGS);
 }
 function fmtSession(s) {
-  return { id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, durationSecs: s.durationSecs, method: s.method, note: s.note, tags: s.tags || [] };
+  return { id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, durationSecs: s.durationSecs, method: s.method, note: s.note, tags: s.tags || [], type: s.type || 'study' };
 }
 function checkAdminPassword(req, res) {
   if (!KILL_SWITCH_PASSWORD) { res.status(503).json({ error: 'Admin not configured (set KILL_SWITCH_PASSWORD).' }); return false; }
@@ -256,6 +256,7 @@ app.post('/sessions/start', requireAuth, (req, res) => {
   const open = q.openSession(db, req.userId);
   if (open) return res.status(409).json({ error: 'session already active', sessionId: open.id });
 
+  const type = ['study', 'work'].includes(req.body.type) ? req.body.type : 'study';
   const session = {
     id: uid(),
     userId: req.userId,
@@ -263,13 +264,14 @@ app.post('/sessions/start', requireAuth, (req, res) => {
     endedAt: null,
     durationSecs: null,
     method: req.body.method || 'manual',
+    type,
     note: null,
     tags: sanitizeTags(req.body.tags),
     createdAt: Date.now()
   };
   db.sessions.push(session);
   saveDB(db);
-  pushToUser(req.userId, 'session:start', { sessionId: session.id, startedAt: session.startedAt, method: session.method });
+  pushToUser(req.userId, 'session:start', { sessionId: session.id, startedAt: session.startedAt, method: session.method, type: session.type });
   res.json({ sessionId: session.id, startedAt: session.startedAt });
 });
 
@@ -309,6 +311,7 @@ app.post('/sessions/log', requireAuth, (req, res) => {
   if (durationSecs < 30) return res.status(400).json({ error: 'session must be at least 30 seconds' });
   if (durationSecs > 86400) return res.status(400).json({ error: 'session cannot exceed 24 hours' });
 
+  const type = ['study', 'work'].includes(req.body.type) ? req.body.type : 'study';
   const db = loadDB();
   const session = {
     id: uid(),
@@ -317,6 +320,7 @@ app.post('/sessions/log', requireAuth, (req, res) => {
     endedAt,
     durationSecs,
     method: method || 'manual',
+    type,
     note: note ? String(note).slice(0, MAX_NOTE) : null,
     tags: sanitizeTags(tags),
     createdAt: Date.now()
@@ -353,7 +357,7 @@ app.get('/sessions/today', requireAuth, (req, res) => {
   const open = q.openSession(db, req.userId);
   res.json({
     sessions,
-    activeSession: open ? { id: open.id, started_at: open.startedAt, method: open.method } : null,
+    activeSession: open ? { id: open.id, started_at: open.startedAt, method: open.method, type: open.type || 'study' } : null,
     progress: { totalSecs, goalSecs, percent: Math.min(100, Math.round((totalSecs / goalSecs) * 100)) }
   });
 });
@@ -362,10 +366,10 @@ app.get('/sessions/week', requireAuth, (req, res) => {
   const db = loadDB();
   const user = q.userById(db, req.userId);
   const sevenAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const sessions = q.sessionsByUser(db, req.userId)
-    .filter(s => s.endedAt && s.startedAt >= sevenAgo)
-    .sort((a, b) => b.startedAt - a.startedAt)
-    .map(fmtSession);
+  const typeFilter = ['study', 'work'].includes(req.query.type) ? req.query.type : null;
+  let weekSessions = q.sessionsByUser(db, req.userId).filter(s => s.endedAt && s.startedAt >= sevenAgo);
+  if (typeFilter) weekSessions = weekSessions.filter(s => (s.type || 'study') === typeFilter);
+  const sessions = weekSessions.sort((a, b) => b.startedAt - a.startedAt).map(fmtSession);
   const totalSecs = sessions.reduce((acc, s) => acc + s.durationSecs, 0);
   const goalSecs = user?.goalSecs || 18000;
   res.json({
@@ -384,6 +388,8 @@ app.get('/sessions/history', requireAuth, (req, res) => {
     .filter(s => s.endedAt)
     .sort((a, b) => b.startedAt - a.startedAt);
 
+  const typeFilter = ['study', 'work'].includes(req.query.type) ? req.query.type : null;
+  if (typeFilter) all = all.filter(s => (s.type || 'study') === typeFilter);
   if (tag) all = all.filter(s => (s.tags || []).includes(tag));
 
   const total = all.length;
@@ -393,7 +399,9 @@ app.get('/sessions/history', requireAuth, (req, res) => {
 
 app.get('/sessions/stats', requireAuth, (req, res) => {
   const db = loadDB();
-  const all = q.sessionsByUser(db, req.userId).filter(s => s.endedAt);
+  const typeFilter = ['study', 'work'].includes(req.query.type) ? req.query.type : null;
+  let all = q.sessionsByUser(db, req.userId).filter(s => s.endedAt);
+  if (typeFilter) all = all.filter(s => (s.type || 'study') === typeFilter);
 
   let streak = 0;
   const seen = new Set(all.map(s => dayKey(s.startedAt)));
@@ -421,10 +429,11 @@ app.get('/sessions/export.csv', requireAuth, (req, res) => {
     .sort((a, b) => a.startedAt - b.startedAt);
 
   const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows = [['id', 'startedAt', 'endedAt', 'durationSecs', 'method', 'note', 'tags'].join(',')];
+  const rows = [['id', 'type', 'startedAt', 'endedAt', 'durationSecs', 'method', 'note', 'tags'].join(',')];
   for (const s of sessions) {
     rows.push([
       esc(s.id),
+      esc(s.type || 'study'),
       esc(new Date(s.startedAt).toISOString()),
       esc(new Date(s.endedAt).toISOString()),
       s.durationSecs,
