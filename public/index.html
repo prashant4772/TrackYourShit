@@ -63,6 +63,14 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 .nav-avatar { width:30px; height:30px; border-radius:50%; background:var(--purple-light); color:var(--purple); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
 .live-pill { display:flex; align-items:center; gap:5px; background:var(--green-light); color:var(--green); font-size:11px; font-weight:500; padding:3px 10px; border-radius:99px; }
 .live-dot { width:6px; height:6px; border-radius:50%; background:var(--green-mid); animation:pulse 1.6s ease-in-out infinite; }
+.nav-live-people { display:flex; align-items:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.nav-live-avs { display:flex; flex-direction:row-reverse; }
+.nlav { width:26px; height:26px; border-radius:50%; background:var(--green-light); color:var(--green); font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; border:2px solid var(--bg); margin-right:-6px; position:relative; }
+.nlav.work { background:#EFF6FF; color:#1D4ED8; }
+.nlav.more { background:var(--border); color:var(--text-2); font-size:9px; }
+.nlav::after { content:''; position:absolute; bottom:0; right:0; width:7px; height:7px; border-radius:50%; background:var(--green-mid); border:1.5px solid var(--bg); animation:pulse 1.6s ease-in-out infinite; }
+.nlav.more::after { display:none; }
+@media(prefers-color-scheme:dark){.nlav{border-color:var(--bg);}.nlav.work{background:#1E2F4F;color:#93C5FD;}}
 @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
 
 /* BOTTOM NAV */
@@ -283,23 +291,6 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 #screen-dashboard.total-mode .start-core{background:var(--green);}
 #screen-dashboard.total-mode .session-timer{color:var(--green-mid);}
 #screen-dashboard.total-mode .wbar.today{background:var(--green-mid);}
-/* LIVE SIDE PANEL */
-@keyframes live-pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.live-now-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:live-pulse 1.5s ease-in-out infinite;flex-shrink:0;}
-.dash-split{display:flex;gap:12px;align-items:flex-start;}
-.dash-main{flex:1;min-width:0;}
-#live-side-panel{width:88px;flex-shrink:0;background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:12px 8px;align-self:flex-start;}
-.live-side-header{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:10px;}
-.live-side-label{font-size:9px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;}
-.live-side-card{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--surface);border:.5px solid #22c55e;border-radius:10px;padding:8px 4px;cursor:pointer;margin-bottom:8px;-webkit-tap-highlight-color:transparent;}
-.live-side-avatar{width:32px;height:32px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--purple);position:relative;}
-.live-side-avatar::after{content:'';position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;background:#22c55e;border:1.5px solid var(--surface);}
-.live-side-name{font-size:9px;font-weight:600;color:var(--text);text-align:center;width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.live-side-since{font-size:8px;color:var(--text-3);}
-.live-side-mode{font-size:7px;font-weight:700;padding:1px 4px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px;}
-.live-side-mode.work{background:#EFF6FF;color:#2563EB;}
-.live-side-mode.study{background:var(--purple-light);color:var(--purple);}
-@media (prefers-color-scheme:dark){.live-side-mode.work{background:#1E2F4F;color:#93C5FD;}}
 /* NICKNAME EDIT */
 .nick-edit-wrap{display:none;margin-top:4px;}
 .nick-edit-wrap.open{display:flex;gap:4px;align-items:center;}
@@ -479,6 +470,9 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     <span class="nav-logo">tracl</span>
     <div class="nav-right">
       <div class="live-pill" id="nav-live" style="display:none"><span class="live-dot"></span>live</div>
+      <div class="nav-live-people" id="nav-live-people" style="display:none">
+        <div class="nav-live-avs" id="nav-live-avs"></div>
+      </div>
       <div class="nav-avatar" id="nav-avatar">—</div>
     </div>
   </nav>
@@ -488,59 +482,51 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
       <button class="mode-tab" id="mode-tab-work" onclick="switchMode('work')">Work</button>
       <button class="mode-tab" id="mode-tab-total" onclick="switchMode('total')">Total</button>
     </div>
-    <div class="dash-split">
-      <div class="dash-main">
-        <div id="shortcut-banner" style="display:none" class="shortcut-banner">
-          <div class="shortcut-banner-text" id="shortcut-banner-text"></div>
-          <button class="shortcut-banner-close" onclick="this.closest('.shortcut-banner').style.display='none'">×</button>
-        </div>
-        <div class="hero-block">
-          <div class="hero-label">today</div>
-          <div class="hero-time" id="hero-time">0h 00m</div>
-          <div class="hero-sub" id="hero-sub">—</div>
-          <div class="goal-bar" id="goal-bar" style="display:none"><div class="goal-fill" id="goal-fill" style="width:0%"></div></div>
-        </div>
-        <div id="idle-state">
-          <div class="start-ring" onclick="handleStart()">
-            <button class="start-core" aria-label="start session">
-              <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              <span>start</span>
-            </button>
-          </div>
-          <div class="hint-text">tap to begin · or place phone in dock</div>
-        </div>
-        <div id="active-state" style="display:none">
-          <div class="session-timer-block">
-            <div style="font-size:11px;color:var(--text-3);margin-bottom:5px">this session</div>
-            <div class="session-timer" id="session-timer">00:00:00</div>
-            <div class="server-tag"><span class="server-dot"></span>synced to server time</div>
-          </div>
-          <div class="cards-row">
-            <div class="card"><div class="card-label">started at</div><div class="card-val" id="active-start-time">—</div><div class="card-sub" id="active-method">manual</div></div>
-            <div class="card"><div class="card-label">today so far</div><div class="card-val" id="active-today">—</div><div class="card-sub" id="active-goal-sub">—</div></div>
-          </div>
-          <button class="end-btn" id="end-btn" onclick="openEndSheet()">end session</button>
-          <div class="hint-text">or pull phone from dock</div>
-        </div>
-        <div style="margin-top:1.25rem">
-          <div class="cards-row three">
-            <div class="card"><div class="card-label">this week</div><div class="card-val" id="stat-week">—</div></div>
-            <div class="card"><div class="card-label">streak</div><div class="card-val" id="stat-streak">0</div><div class="card-sub">days</div></div>
-            <div class="card"><div class="card-label">avg session</div><div class="card-val" id="stat-avg">—</div></div>
-          </div>
-          <div class="sl">this week</div>
-          <div class="week-card"><div class="week-bars" id="week-bars"></div></div>
-          <div id="streak-section" style="display:none"><div class="sl">streak</div><div class="streak-row" id="streak-dots"></div></div>
-          <div class="sl">today's sessions</div>
-          <div class="sessions-card" id="sessions-list"><div class="empty-msg">no sessions yet · tap start when you're ready</div></div>
-          <div id="insight-block" style="display:none"><div class="insight-card" id="insight-text"></div></div>
-          <div class="app-footer">tracl v1.5 · Jun 2026</div>
-        </div>
+    <div id="shortcut-banner" style="display:none" class="shortcut-banner">
+      <div class="shortcut-banner-text" id="shortcut-banner-text"></div>
+      <button class="shortcut-banner-close" onclick="this.closest('.shortcut-banner').style.display='none'">×</button>
+    </div>
+    <div class="hero-block">
+      <div class="hero-label">today</div>
+      <div class="hero-time" id="hero-time">0h 00m</div>
+      <div class="hero-sub" id="hero-sub">—</div>
+      <div class="goal-bar" id="goal-bar" style="display:none"><div class="goal-fill" id="goal-fill" style="width:0%"></div></div>
+    </div>
+    <div id="idle-state">
+      <div class="start-ring" onclick="handleStart()">
+        <button class="start-core" aria-label="start session">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>start</span>
+        </button>
       </div>
-      <div id="live-side-panel" style="display:none">
-        <div class="live-side-header"><div class="live-now-dot"></div><span class="live-side-label">live</span></div>
-        <div id="live-side-cards"></div>
+      <div class="hint-text">tap to begin · or place phone in dock</div>
+    </div>
+    <div id="active-state" style="display:none">
+      <div class="session-timer-block">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:5px">this session</div>
+        <div class="session-timer" id="session-timer">00:00:00</div>
+        <div class="server-tag"><span class="server-dot"></span>synced to server time</div>
       </div>
+      <div class="cards-row">
+        <div class="card"><div class="card-label">started at</div><div class="card-val" id="active-start-time">—</div><div class="card-sub" id="active-method">manual</div></div>
+        <div class="card"><div class="card-label">today so far</div><div class="card-val" id="active-today">—</div><div class="card-sub" id="active-goal-sub">—</div></div>
+      </div>
+      <button class="end-btn" id="end-btn" onclick="openEndSheet()">end session</button>
+      <div class="hint-text">or pull phone from dock</div>
+    </div>
+    <div style="margin-top:1.25rem">
+      <div class="cards-row three">
+        <div class="card"><div class="card-label">this week</div><div class="card-val" id="stat-week">—</div></div>
+        <div class="card"><div class="card-label">streak</div><div class="card-val" id="stat-streak">0</div><div class="card-sub">days</div></div>
+        <div class="card"><div class="card-label">avg session</div><div class="card-val" id="stat-avg">—</div></div>
+      </div>
+      <div class="sl">this week</div>
+      <div class="week-card"><div class="week-bars" id="week-bars"></div></div>
+      <div id="streak-section" style="display:none"><div class="sl">streak</div><div class="streak-row" id="streak-dots"></div></div>
+      <div class="sl">today's sessions</div>
+      <div class="sessions-card" id="sessions-list"><div class="empty-msg">no sessions yet · tap start when you're ready</div></div>
+      <div id="insight-block" style="display:none"><div class="insight-card" id="insight-text"></div></div>
+      <div class="app-footer">tracl v1.5 · Jun 2026</div>
     </div>
   </div>
   <nav class="bottom-nav">
@@ -1761,18 +1747,17 @@ async function loadLiveConnections(){
 }
 
 function renderLiveConnections(live){
-  const el=document.getElementById('live-side-panel');
-  if(!live.length){el.style.display='none';return;}
-  el.style.display='block';
-  document.getElementById('live-side-cards').innerHTML=live.map(p=>{
-    const displayName=p.nickname||p.name||'Unknown';
-    return `<div class="live-side-card" onclick="viewUserProfile('${p.userId}','${(p.name||'').replace(/'/g,"\\'")}','${(p.nickname||'').replace(/'/g,"\\'")}')">
-      <div class="live-side-avatar">${initials(displayName)}</div>
-      <div class="live-side-name">${displayName}</div>
-      <div class="live-side-since">${fmtHM(Math.max(60,Math.floor((Date.now()-p.startedAt)/1000)))}</div>
-      <div class="live-side-mode ${p.type==='work'?'work':'study'}">${p.type==='work'?'work':'study'}</div>
-    </div>`;
-  }).join('');
+  const wrap=document.getElementById('nav-live-people');
+  const avs=document.getElementById('nav-live-avs');
+  if(!live.length){wrap.style.display='none';return;}
+  wrap.style.display='flex';
+  const shown=live.slice(0,3);
+  const extra=live.length-shown.length;
+  avs.innerHTML=shown.map((p,i)=>{
+    const dn=p.nickname||p.name||'?';
+    const modeClass=p.type==='work'?'work':'study';
+    return `<div class="nlav ${modeClass}" style="z-index:${10-i}" title="${dn}" onclick="viewUserProfile('${p.userId}','${(p.name||'').replace(/'/g,"\\'")}','${(p.nickname||'').replace(/'/g,"\\'")}')">${initials(dn)}</div>`;
+  }).join('')+(extra>0?`<div class="nlav more">+${extra}</div>`:'');
 }
 
 // ── BOOT ──
