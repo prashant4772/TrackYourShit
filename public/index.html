@@ -228,6 +228,26 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 .danger-btn { width:100%; padding:12px; background:transparent; color:var(--red); border:.5px solid rgba(192,57,43,.3); border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; }
 .danger-btn:hover { background:var(--red-light); }
 
+/* TOGGLE */
+.toggle-row { display:flex; align-items:center; justify-content:space-between; padding:13px 14px; border-bottom:.5px solid var(--border); }
+.toggle-row:last-child { border-bottom:none; }
+.toggle-label { font-size:13px; color:var(--text); }
+.toggle-sub { font-size:11px; color:var(--text-3); margin-top:1px; }
+.toggle { position:relative; width:44px; height:26px; flex-shrink:0; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-track { position:absolute; inset:0; background:var(--border-mid); border-radius:99px; cursor:pointer; transition:background .2s; }
+.toggle input:checked+.toggle-track { background:var(--purple); }
+.toggle-track::after { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s; }
+.toggle input:checked+.toggle-track::after { transform:translateX(18px); }
+/* NOTIF TIMES */
+.time-chips { display:flex; flex-wrap:wrap; gap:6px; padding:10px 14px; border-bottom:.5px solid var(--border); }
+.time-chip { display:inline-flex; align-items:center; gap:4px; background:var(--purple-light); color:var(--purple); font-size:12px; font-weight:500; padding:3px 10px; border-radius:99px; }
+.time-chip button { background:none; border:none; color:var(--purple-mid); cursor:pointer; font-size:14px; padding:0; line-height:1; }
+.add-time-row { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:.5px solid var(--border); }
+.add-time-row input[type=time] { background:var(--bg); border:.5px solid var(--border-mid); border-radius:var(--radius-sm); color:var(--text); font-size:13px; font-family:inherit; padding:5px 8px; outline:none; flex:1; }
+.add-time-row button { padding:5px 12px; background:var(--purple); color:#fff; border:none; border-radius:var(--radius-sm); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.notif-note { font-size:11px; color:var(--text-3); padding:8px 14px 4px; }
+
 @media (max-width:400px) { .hero-time{font-size:48px} .sum-dur{font-size:44px} }
 @media (prefers-reduced-motion:reduce) { .live-dot,.loading-logo{animation:none;opacity:.5} }
 </style>
@@ -474,6 +494,31 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     </div>
 
     <div class="settings-section">
+      <div class="settings-label">notifications</div>
+      <div class="settings-card" id="notif-card">
+        <div class="toggle-row">
+          <div><div class="toggle-label">reminders</div><div class="toggle-sub" id="notif-status-sub">tap to enable</div></div>
+          <label class="toggle"><input type="checkbox" id="notif-toggle" onchange="handleNotifToggle()"><span class="toggle-track"></span></label>
+        </div>
+        <div id="notif-settings-body" style="display:none">
+          <div class="time-chips" id="notif-time-chips"></div>
+          <div class="add-time-row">
+            <input type="time" id="notif-time-input" value="09:00">
+            <button onclick="addNotifTime()">+ add time</button>
+          </div>
+          <div class="toggle-row" style="border-bottom:none">
+            <div><div class="toggle-label">only when behind on goal</div><div class="toggle-sub">skip if you've already hit your target</div></div>
+            <label class="toggle"><input type="checkbox" id="notif-only-behind" onchange="saveNotifSettings()"><span class="toggle-track"></span></label>
+          </div>
+          <div class="notif-note" id="notif-support-note" style="display:none;color:var(--red)">Push notifications aren't supported in this browser.</div>
+          <div style="padding:0 14px 12px;margin-top:4px">
+            <button class="settings-row-btn" onclick="sendTestNotif()" style="font-size:12px;color:var(--text-3)">send test notification</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <div class="settings-label">stats</div>
       <div class="settings-card">
         <div class="settings-row"><span class="settings-row-label">total sessions</span><span class="settings-row-val" id="st-total">—</span></div>
@@ -608,7 +653,7 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ── TABS ──
 function switchTab(tab){
   if(tab==='dashboard'){renderDashboard();showScreen('screen-dashboard');}
-  else if(tab==='history'){loadHistory(true);showScreen('screen-history');}
+  else if(tab==='history'){histTag=null;loadHistory(true);showScreen('screen-history');}
   else if(tab==='settings'){renderSettings();showScreen('screen-settings');}
 }
 
@@ -904,7 +949,7 @@ function startTick(goalSecs,priorSecs){
 
 // ── HISTORY ──
 async function loadHistory(reset){
-  if(reset){histPage=1;histTotal=0;histSessions=[];histTag=null;document.getElementById('history-list').innerHTML='';document.getElementById('history-empty').style.display='none';document.getElementById('load-more-btn').style.display='none';renderTagFilters();}
+  if(reset){histPage=1;histTotal=0;histSessions=[];document.getElementById('history-list').innerHTML='';document.getElementById('history-empty').style.display='none';document.getElementById('load-more-btn').style.display='none';renderTagFilters();}
   try{
     const tagQ=histTag?'&tag='+encodeURIComponent(histTag):'';
     const data=await api('GET',`/sessions/history?page=${histPage}&limit=${HIST_LIMIT}${tagQ}`);
@@ -964,6 +1009,7 @@ function renderSettings(){
   document.getElementById('disp-goal').textContent=fmtGoal(currentUser.goalSecs||18000);
   document.getElementById('disp-email').textContent=currentUser.email;
   loadStats();
+  renderNotifSettings();
 }
 
 async function loadStats(){
@@ -1040,6 +1086,112 @@ async function confirmDelete(){
   catch(err){document.getElementById('del-err').textContent=err.message;document.getElementById('del-err').classList.add('show');document.getElementById('del-btn').disabled=false;}
 }
 
+// ── NOTIFICATIONS ──
+let notifTimes=[];
+
+function urlB64ToUint8(b64){
+  const pad='='.repeat((4-b64.length%4)%4);
+  const b=(b64+pad).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(b);return Uint8Array.from(raw,c=>c.charCodeAt(0));
+}
+
+async function registerSW(){
+  if(!('serviceWorker' in navigator)) return null;
+  try{return await navigator.serviceWorker.register('/sw.js');}catch{return null;}
+}
+
+async function subscribePush(){
+  if(!('PushManager' in window)) return false;
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted') return false;
+  const reg=await navigator.serviceWorker.ready;
+  const keyData=await api('GET','/notifications/vapid-key');
+  const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8(keyData.publicKey)});
+  await api('POST','/notifications/subscribe',{subscription:sub.toJSON(),tzOffset:new Date().getTimezoneOffset()});
+  return true;
+}
+
+async function unsubscribePush(){
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub) await sub.unsubscribe();
+  }catch{}
+  await api('DELETE','/notifications/subscribe');
+}
+
+async function renderNotifSettings(){
+  const supported='Notification' in window && 'PushManager' in window;
+  document.getElementById('notif-support-note').style.display=supported?'none':'block';
+  try{
+    const s=await api('GET','/notifications/settings');
+    notifTimes=s.times||['09:00'];
+    document.getElementById('notif-toggle').checked=s.enabled&&s.subscribed;
+    document.getElementById('notif-settings-body').style.display=(s.enabled&&s.subscribed)?'block':'none';
+    document.getElementById('notif-only-behind').checked=s.onlyIfBehind!==false;
+    document.getElementById('notif-status-sub').textContent=
+      s.subscribed?(s.enabled?'active':'paused'):'tap to enable';
+    renderNotifTimes();
+  }catch{}
+}
+
+function renderNotifTimes(){
+  const c=document.getElementById('notif-time-chips');c.innerHTML='';
+  notifTimes.forEach((t,i)=>{
+    const chip=document.createElement('span');chip.className='time-chip';
+    chip.innerHTML=t+'<button onclick="removeNotifTime('+i+')">×</button>';
+    c.appendChild(chip);
+  });
+}
+
+function removeNotifTime(i){
+  notifTimes.splice(i,1);renderNotifTimes();saveNotifSettings();
+}
+
+function addNotifTime(){
+  const val=document.getElementById('notif-time-input').value;
+  if(!val) return;
+  if(notifTimes.length>=3){showToast('max 3 reminder times');return;}
+  if(!notifTimes.includes(val)){notifTimes.push(val);notifTimes.sort();renderNotifTimes();saveNotifSettings();}
+}
+
+async function saveNotifSettings(){
+  try{
+    await api('PATCH','/notifications/settings',{
+      enabled:document.getElementById('notif-toggle').checked,
+      times:notifTimes,
+      onlyIfBehind:document.getElementById('notif-only-behind').checked
+    });
+  }catch(err){showToast(err.message);}
+}
+
+async function handleNotifToggle(){
+  const enabled=document.getElementById('notif-toggle').checked;
+  if(enabled){
+    if(!('Notification' in window)||!('PushManager' in window)){
+      document.getElementById('notif-toggle').checked=false;
+      document.getElementById('notif-support-note').style.display='block';
+      return;
+    }
+    const ok=await subscribePush();
+    if(!ok){document.getElementById('notif-toggle').checked=false;showToast('notification permission denied');return;}
+    document.getElementById('notif-settings-body').style.display='block';
+    document.getElementById('notif-status-sub').textContent='active';
+  }else{
+    await unsubscribePush();
+    document.getElementById('notif-settings-body').style.display='none';
+    document.getElementById('notif-status-sub').textContent='tap to enable';
+  }
+  await saveNotifSettings();
+}
+
+async function sendTestNotif(){
+  try{
+    await api('POST','/notifications/test');
+    showToast('test notification sent!');
+  }catch(err){showToast(err.message);}
+}
+
 // ── NFC ──
 async function initNFC(){
   if(!('NDEFReader' in window)) return;
@@ -1063,6 +1215,7 @@ async function enterApp(user){
   showScreen('screen-dashboard');
   connectSSE();
   initNFC();
+  registerSW();
   await handleURLAction();
 }
 

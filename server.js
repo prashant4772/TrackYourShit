@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const webpush = require('web-push');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,7 +21,7 @@ function loadDB() {
   try {
     if (fs.existsSync(DB_PATH)) return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
   } catch {}
-  return { users: [], sessions: [] };
+  return { users: [], sessions: [], subscriptions: [] };
 }
 function saveDB(db) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db), 'utf8');
@@ -438,6 +439,138 @@ app.get('/sessions/export.csv', requireAuth, (req, res) => {
   res.send(rows.join('\n'));
 });
 
+// ── PUSH NOTIFICATIONS ──
+function fmtDuration(secs) {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
+  return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+}
+
+// VAPID keys: generate once, persist in DB on the Railway volume
+function initVapid() {
+  const db = loadDB();
+  if (!db.vapidKeys) {
+    db.vapidKeys = webpush.generateVAPIDKeys();
+    saveDB(db);
+    console.log('[vapid] generated new VAPID keys');
+  }
+  webpush.setVapidDetails(
+    'mailto:tracl@localhost',
+    db.vapidKeys.publicKey,
+    db.vapidKeys.privateKey
+  );
+  return db.vapidKeys.publicKey;
+}
+const VAPID_PUBLIC_KEY = initVapid();
+
+// Convert UTC ms + tzOffset (from getTimezoneOffset) to local YYYY-MM-DD
+function localDay(utcMs, tzOffset) {
+  return new Date(utcMs - tzOffset * 60000).toISOString().slice(0, 10);
+}
+
+// Notify scheduler — runs every minute
+setInterval(async () => {
+  const db = loadDB();
+  if (!db.subscriptions?.length) return;
+  const now = new Date();
+  const utcMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+
+  for (const user of db.users) {
+    const ns = user.notifSettings;
+    if (!ns?.enabled || !ns.times?.length) continue;
+    const subs = (db.subscriptions || []).filter(s => s.userId === user.id);
+    if (!subs.length) continue;
+
+    for (const sub of subs) {
+      const tz = sub.tzOffset ?? 0;
+      const localMin = ((utcMin - tz) % 1440 + 1440) % 1440;
+      const localHH = String(Math.floor(localMin / 60)).padStart(2, '0');
+      const localMM = String(localMin % 60).padStart(2, '0');
+      if (!ns.times.includes(`${localHH}:${localMM}`)) continue;
+
+      const today = localDay(Date.now(), tz);
+      const todaySessions = db.sessions.filter(s =>
+        s.userId === user.id && s.endedAt && localDay(s.startedAt, tz) === today
+      );
+      const done = todaySessions.reduce((a, s) => a + s.durationSecs, 0);
+      if (ns.onlyIfBehind && done >= (user.goalSecs || 18000)) continue;
+
+      const remaining = (user.goalSecs || 18000) - done;
+      const body = done === 0
+        ? `Time to study! Your goal is ${fmtDuration(user.goalSecs || 18000)} today.`
+        : `${fmtDuration(Math.max(0, remaining))} left to reach your ${fmtDuration(user.goalSecs || 18000)} goal.`;
+
+      try {
+        await webpush.sendNotification(sub.subscription, JSON.stringify({ title: 'tracl', body, tag: 'tracl-daily' }));
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          db.subscriptions = db.subscriptions.filter(s => s !== sub);
+          saveDB(db);
+        }
+      }
+    }
+  }
+}, 60 * 1000);
+
+app.get('/notifications/vapid-key', (_req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+app.post('/notifications/subscribe', requireAuth, (req, res) => {
+  const { subscription, tzOffset } = req.body;
+  if (!subscription?.endpoint) return res.status(400).json({ error: 'subscription required' });
+  const db = loadDB();
+  if (!db.subscriptions) db.subscriptions = [];
+  // Replace existing subscription for this endpoint (device)
+  db.subscriptions = db.subscriptions.filter(s => s.subscription.endpoint !== subscription.endpoint);
+  db.subscriptions.push({ userId: req.userId, tzOffset: tzOffset ?? 0, subscription });
+  saveDB(db);
+  res.json({ ok: true });
+});
+
+app.delete('/notifications/subscribe', requireAuth, (req, res) => {
+  const db = loadDB();
+  db.subscriptions = (db.subscriptions || []).filter(s => s.userId !== req.userId);
+  saveDB(db);
+  res.json({ ok: true });
+});
+
+app.get('/notifications/settings', requireAuth, (req, res) => {
+  const db = loadDB();
+  const user = q.userById(db, req.userId);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+  const subscribed = (db.subscriptions || []).some(s => s.userId === req.userId);
+  res.json({ ...(user.notifSettings || { enabled: false, times: ['09:00'], onlyIfBehind: true }), subscribed });
+});
+
+app.patch('/notifications/settings', requireAuth, (req, res) => {
+  const { enabled, times, onlyIfBehind } = req.body;
+  const db = loadDB();
+  const user = q.userById(db, req.userId);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+  if (!user.notifSettings) user.notifSettings = { enabled: false, times: ['09:00'], onlyIfBehind: true };
+  if (enabled !== undefined) user.notifSettings.enabled = !!enabled;
+  if (Array.isArray(times)) user.notifSettings.times = times.filter(t => /^\d{2}:\d{2}$/.test(t)).slice(0, 3);
+  if (onlyIfBehind !== undefined) user.notifSettings.onlyIfBehind = !!onlyIfBehind;
+  saveDB(db);
+  res.json({ ...user.notifSettings });
+});
+
+app.post('/notifications/test', requireAuth, async (req, res) => {
+  const db = loadDB();
+  const user = q.userById(db, req.userId);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+  const subs = (db.subscriptions || []).filter(s => s.userId === req.userId);
+  if (!subs.length) return res.status(400).json({ error: 'no subscription found — enable notifications first' });
+  let sent = 0;
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(sub.subscription, JSON.stringify({ title: 'tracl', body: 'Notifications are working!', tag: 'tracl-test' }));
+      sent++;
+    } catch {}
+  }
+  res.json({ ok: true, sent });
+});
+
 // ── KILL SWITCH ──
 app.get('/admin/reset', (_req, res) => {
   res.send(`<!DOCTYPE html>
@@ -493,7 +626,8 @@ app.get('/admin/reset', (_req, res) => {
 
 app.post('/admin/reset', (req, res) => {
   if (!checkAdminPassword(req, res)) return;
-  saveDB({ users: [], sessions: [] });
+  const db = loadDB();
+  saveDB({ users: [], sessions: [], subscriptions: [], vapidKeys: db.vapidKeys });
   clients.clear();
   console.log(`[kill-switch] database wiped at ${new Date().toISOString()}`);
   res.json({ message: 'All data erased.' });
