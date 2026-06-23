@@ -21,7 +21,7 @@ function loadDB() {
   try {
     if (fs.existsSync(DB_PATH)) return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
   } catch {}
-  return { users: [], sessions: [], subscriptions: [] };
+  return { users: [], sessions: [], subscriptions: [], connections: [] };
 }
 function saveDB(db) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db), 'utf8');
@@ -245,6 +245,7 @@ app.delete('/auth/me', requireAuth, (req, res) => {
 
   db.users = db.users.filter(u => u.id !== req.userId);
   db.sessions = db.sessions.filter(s => s.userId !== req.userId);
+  db.connections = (db.connections || []).filter(c => c.sharerId !== req.userId && c.viewerId !== req.userId);
   saveDB(db);
   clients.delete(req.userId);
   res.json({ ok: true });
@@ -580,6 +581,118 @@ app.post('/notifications/test', requireAuth, async (req, res) => {
   res.json({ ok: true, sent });
 });
 
+// ── SOCIAL ──
+const socialLimiter = rateLimit(60 * 60 * 1000, 40);
+
+// canView: returns true if viewerId has an accepted connection to see sharerId's data
+function canView(db, viewerId, sharerId) {
+  return (db.connections || []).some(c => c.sharerId === sharerId && c.viewerId === viewerId && c.status === 'accepted');
+}
+
+function fmtConnection(db, c, perspectiveUserId) {
+  const otherId = c.sharerId === perspectiveUserId ? c.viewerId : c.sharerId;
+  const other = q.userById(db, otherId);
+  return { id: c.id, status: c.status, createdAt: c.createdAt, user: other ? { id: other.id, name: other.name, email: other.email } : null };
+}
+
+// Share MY data with someone → they must accept to see me
+app.post('/social/invite', requireAuth, socialLimiter, (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'email required' });
+  const db = loadDB();
+  const target = q.userByEmail(db, email.toLowerCase().trim());
+  if (!target) return res.status(404).json({ error: 'no user found with that email' });
+  if (target.id === req.userId) return res.status(400).json({ error: 'cannot share with yourself' });
+
+  if (!db.connections) db.connections = [];
+  const dup = db.connections.find(c => c.sharerId === req.userId && c.viewerId === target.id);
+  if (dup) return res.status(409).json({ error: dup.status === 'pending' ? 'invite already sent' : 'already sharing with this person' });
+
+  const conn = { id: uid(), sharerId: req.userId, viewerId: target.id, status: 'pending', createdAt: Date.now() };
+  db.connections.push(conn);
+  saveDB(db);
+  res.status(201).json({ ok: true, connectionId: conn.id, targetName: target.name });
+});
+
+// Get all my connections: shared (I'm sharerId) + received (I'm viewerId)
+app.get('/social/connections', requireAuth, (req, res) => {
+  const db = loadDB();
+  const conns = db.connections || [];
+  const shared = conns.filter(c => c.sharerId === req.userId).map(c => fmtConnection(db, c, req.userId));
+  const received = conns.filter(c => c.viewerId === req.userId).map(c => fmtConnection(db, c, req.userId));
+  res.json({ shared, received });
+});
+
+// Accept or decline a pending invite (only viewerId can act)
+app.patch('/social/connections/:id', requireAuth, (req, res) => {
+  const { action } = req.body;
+  if (!['accept', 'decline'].includes(action)) return res.status(400).json({ error: 'action must be accept or decline' });
+  const db = loadDB();
+  const conn = (db.connections || []).find(c => c.id === req.params.id);
+  if (!conn) return res.status(404).json({ error: 'connection not found' });
+  if (conn.viewerId !== req.userId) return res.status(403).json({ error: 'only the recipient can respond' });
+  if (conn.status !== 'pending') return res.status(409).json({ error: 'not pending' });
+
+  if (action === 'accept') {
+    conn.status = 'accepted'; conn.acceptedAt = Date.now(); saveDB(db);
+    res.json({ ok: true, status: 'accepted' });
+  } else {
+    db.connections = db.connections.filter(c => c.id !== req.params.id); saveDB(db);
+    res.json({ ok: true, status: 'declined' });
+  }
+});
+
+// Remove a connection (either side: sharerId revokes, viewerId unfollows)
+app.delete('/social/connections/:id', requireAuth, (req, res) => {
+  const db = loadDB();
+  const conn = (db.connections || []).find(c => c.id === req.params.id);
+  if (!conn) return res.status(404).json({ error: 'connection not found' });
+  if (conn.sharerId !== req.userId && conn.viewerId !== req.userId) return res.status(403).json({ error: 'not your connection' });
+  db.connections = db.connections.filter(c => c.id !== req.params.id);
+  saveDB(db);
+  res.json({ ok: true });
+});
+
+// View another user's profile — requires accepted connection (sharerId=them, viewerId=me)
+app.get('/social/users/:userId/profile', requireAuth, (req, res) => {
+  const { userId } = req.params;
+  const db = loadDB();
+  if (!canView(db, req.userId, userId)) return res.status(403).json({ error: 'access not granted' });
+  const user = q.userById(db, userId);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+
+  const today = dayKey(Date.now());
+  const sevenAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const all = q.sessionsByUser(db, userId).filter(s => s.endedAt);
+
+  const todaySess = all.filter(s => dayKey(s.startedAt) === today);
+  const todayStudy = todaySess.filter(s => (s.type || 'study') === 'study').reduce((a, s) => a + s.durationSecs, 0);
+  const todayWork = todaySess.filter(s => s.type === 'work').reduce((a, s) => a + s.durationSecs, 0);
+
+  let streak = 0;
+  const seen = new Set(all.map(s => dayKey(s.startedAt)));
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    if (seen.has(d.toISOString().slice(0, 10))) streak++;
+    else if (i > 0) break;
+  }
+
+  const open = q.openSession(db, userId);
+  const weekSessions = all.filter(s => s.startedAt >= sevenAgo)
+    .map(s => ({ startedAt: s.startedAt, durationSecs: s.durationSecs, type: s.type || 'study' }));
+  const recent = all.sort((a, b) => b.startedAt - a.startedAt).slice(0, 15)
+    .map(s => ({ id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, durationSecs: s.durationSecs, note: s.note || null, tags: s.tags || [], type: s.type || 'study' }));
+
+  res.json({
+    user: { id: user.id, name: user.name, goalSecs: user.goalSecs },
+    today: { study: todayStudy, work: todayWork },
+    streak,
+    activeSession: open ? { type: open.type || 'study', startedAt: open.startedAt } : null,
+    weekSessions,
+    recent
+  });
+});
+
 // ── KILL SWITCH ──
 app.get('/admin/reset', (_req, res) => {
   res.send(`<!DOCTYPE html>
@@ -636,7 +749,7 @@ app.get('/admin/reset', (_req, res) => {
 app.post('/admin/reset', (req, res) => {
   if (!checkAdminPassword(req, res)) return;
   const db = loadDB();
-  saveDB({ users: [], sessions: [], subscriptions: [], vapidKeys: db.vapidKeys });
+  saveDB({ users: [], sessions: [], subscriptions: [], connections: [], vapidKeys: db.vapidKeys });
   clients.clear();
   console.log(`[kill-switch] database wiped at ${new Date().toISOString()}`);
   res.json({ message: 'All data erased.' });
@@ -658,5 +771,18 @@ app.get('/admin/stats', (req, res) => {
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true, time: Date.now() }));
+
+// One-time migration: tag existing sessions with 'study' or 'work' based on their type field
+(function migrateSessionTags() {
+  const db = loadDB();
+  let changed = false;
+  (db.sessions || []).forEach(s => {
+    if (!s.endedAt) return;
+    const tag = s.type === 'work' ? 'work' : 'study';
+    if (!s.tags) s.tags = [];
+    if (!s.tags.includes(tag)) { s.tags.push(tag); changed = true; }
+  });
+  if (changed) saveDB(db);
+})();
 
 app.listen(PORT, '0.0.0.0', () => console.log(`tracl running on port ${PORT}`));

@@ -277,6 +277,32 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 .type-btn{flex:1;padding:6px 0;border:none;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text-2);background:transparent;transition:all .15s;}
 .type-btn.active{background:var(--purple);color:#fff;}
 .type-btn.active-work{background:#2563EB;color:#fff;}
+/* SOCIAL / PEOPLE */
+.bnav-tab{position:relative;}
+.bnav-badge{position:absolute;top:0px;right:calc(50% - 16px);background:#C0392B;color:#fff;font-size:9px;font-weight:700;min-width:14px;height:14px;border-radius:7px;text-align:center;line-height:14px;padding:0 3px;border:1.5px solid var(--bg);display:none;}
+.nav-back-btn{background:none;border:none;cursor:pointer;color:var(--purple);font-size:13px;font-weight:500;font-family:inherit;padding:0;display:flex;align-items:center;gap:3px;}
+.person-row{display:flex;align-items:center;padding:12px 14px;border-bottom:.5px solid var(--border);gap:10px;}
+.person-row:last-child{border-bottom:none;}
+.person-avatar{width:34px;height:34px;border-radius:50%;background:var(--purple-light);color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;}
+.person-info{flex:1;min-width:0;}
+.person-name{font-size:14px;font-weight:500;color:var(--text);}
+.person-sub{font-size:11px;color:var(--text-3);margin-top:2px;}
+.person-actions{display:flex;gap:6px;flex-shrink:0;}
+.pa-btn{padding:5px 11px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;}
+.pa-accept{background:var(--purple);color:#fff;border:none;}
+.pa-view{background:transparent;border:.5px solid var(--border-mid);color:var(--text-2);}
+.pa-remove{background:transparent;border:.5px solid rgba(192,57,43,.3);color:var(--red);}
+.pa-cancel{background:transparent;border:.5px solid var(--border-mid);color:var(--text-3);}
+.invite-row{padding:12px 14px;}
+.invite-input-wrap{display:flex;gap:8px;margin-bottom:0}
+.invite-input{flex:1;padding:9px 12px;background:var(--bg);border:.5px solid var(--border-mid);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
+.invite-input:focus{border-color:var(--purple);}
+.invite-btn{padding:9px 14px;background:var(--purple);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+/* Profile view */
+.pv-today-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;}
+.pv-work-card .card-val{color:#2563EB;}
+.pv-active-pill{display:inline-flex;align-items:center;gap:5px;background:var(--green-light);color:var(--green);font-size:11px;font-weight:500;padding:4px 12px;border-radius:99px;margin-bottom:1rem;}
+.pv-active-dot{width:6px;height:6px;border-radius:50%;background:var(--green-mid);animation:pulse 1.6s ease-in-out infinite;}
 /* PULL TO REFRESH */
 .ptr-ind{position:fixed;top:-52px;left:50%;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;background:var(--surface);border:.5px solid var(--border);display:flex;align-items:center;justify-content:center;z-index:20;transition:top .25s ease;box-shadow:0 2px 8px rgba(0,0,0,.1);pointer-events:none;}
 .ptr-ind svg{width:18px;height:18px;stroke:var(--purple);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;}
@@ -301,12 +327,6 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     <div class="sheet-field">
       <label>note <span style="color:var(--text-3);font-weight:400">(optional)</span></label>
       <textarea id="end-note" placeholder="what did you work on?" rows="2"></textarea>
-    </div>
-    <div class="sheet-field">
-      <label>tags <span style="color:var(--text-3);font-weight:400">(optional · press Enter to add)</span></label>
-      <div class="tag-input-wrap" id="end-tag-wrap">
-        <input id="end-tag-input" placeholder="work, study…" type="text" autocomplete="off">
-      </div>
     </div>
     <div class="sheet-err" id="end-err"></div>
     <div class="sheet-btns">
@@ -440,6 +460,10 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <span class="bnav-label">history</span>
     </button>
+    <button class="bnav-tab" onclick="switchTab('people')">
+      <div style="position:relative;width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="bnav-badge people-badge"></span></div>
+      <span class="bnav-label">people</span>
+    </button>
     <button class="bnav-tab" onclick="switchTab('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       <span class="bnav-label">profile</span>
@@ -478,6 +502,10 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     <button class="bnav-tab active" onclick="switchTab('history')">
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <span class="bnav-label">history</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('people')">
+      <div style="position:relative;width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="bnav-badge people-badge"></span></div>
+      <span class="bnav-label">people</span>
     </button>
     <button class="bnav-tab" onclick="switchTab('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
@@ -607,7 +635,119 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <span class="bnav-label">history</span>
     </button>
+    <button class="bnav-tab" onclick="switchTab('people')">
+      <div style="position:relative;width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="bnav-badge people-badge"></span></div>
+      <span class="bnav-label">people</span>
+    </button>
     <button class="bnav-tab active" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span class="bnav-label">profile</span>
+    </button>
+  </nav>
+</div>
+
+<!-- PEOPLE -->
+<div class="screen" id="screen-people">
+  <nav class="app-nav"><span class="nav-title">people</span></nav>
+  <div class="app-body">
+    <div class="settings-section">
+      <div class="settings-label">share your data</div>
+      <div class="settings-card">
+        <div class="invite-row">
+          <p style="font-size:12px;color:var(--text-2);margin-bottom:10px">Enter someone's email to share your study & work stats. They accept and both can then share with each other.</p>
+          <div class="invite-input-wrap">
+            <input id="invite-email" class="invite-input" type="email" placeholder="their email address" autocomplete="email">
+            <button class="invite-btn" onclick="sendInvite()">Share</button>
+          </div>
+          <div id="invite-msg" class="field-msg" style="margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+    <div id="people-incoming-section" class="settings-section" style="display:none">
+      <div class="settings-label">wants to share with you <span id="people-incoming-badge" style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px"></span></div>
+      <div class="settings-card" id="people-incoming-list"></div>
+    </div>
+    <div id="people-following-section" class="settings-section" style="display:none">
+      <div class="settings-label">following — you can see their data</div>
+      <div class="settings-card" id="people-following-list"></div>
+    </div>
+    <div id="people-sharing-section" class="settings-section" style="display:none">
+      <div class="settings-label">sharing with — they can see your data</div>
+      <div class="settings-card" id="people-sharing-list"></div>
+    </div>
+    <div id="people-pending-section" class="settings-section" style="display:none">
+      <div class="settings-label">pending invites</div>
+      <div class="settings-card" id="people-pending-list"></div>
+    </div>
+    <div id="people-empty" class="empty-msg" style="padding:2rem 0;display:none">no connections yet</div>
+    <div class="app-footer">tracl v1.5 · Jun 2026</div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="bnav-tab" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="bnav-label">today</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span class="bnav-label">history</span>
+    </button>
+    <button class="bnav-tab active" onclick="switchTab('people')">
+      <div style="position:relative;width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="bnav-badge people-badge"></span></div>
+      <span class="bnav-label">people</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span class="bnav-label">profile</span>
+    </button>
+  </nav>
+</div>
+
+<!-- PROFILE VIEW -->
+<div class="screen" id="screen-profile-view">
+  <nav class="app-nav">
+    <button class="nav-back-btn" onclick="switchTab('people')">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      people
+    </button>
+    <span class="nav-title" id="pv-name"></span>
+    <div></div>
+  </nav>
+  <div class="app-body">
+    <div id="pv-loading" class="empty-msg" style="padding:3rem 0">loading…</div>
+    <div id="pv-content" style="display:none">
+      <div id="pv-active-pill" class="pv-active-pill" style="display:none">
+        <div class="pv-active-dot"></div><span id="pv-active-text"></span>
+      </div>
+      <div class="pv-today-row">
+        <div class="card"><div class="card-label">study today</div><div class="card-val" id="pv-study">—</div></div>
+        <div class="card pv-work-card"><div class="card-label">work today</div><div class="card-val" id="pv-work">—</div></div>
+      </div>
+      <div class="cards-row three">
+        <div class="card"><div class="card-label">streak</div><div class="card-val" id="pv-streak">0</div><div class="card-sub">days</div></div>
+        <div class="card"><div class="card-label">this week</div><div class="card-val" id="pv-week-total">—</div></div>
+        <div class="card"><div class="card-label">goal</div><div class="card-val" id="pv-goal">—</div></div>
+      </div>
+      <div class="sl">this week</div>
+      <div class="week-card"><div class="week-bars" id="pv-week-bars"></div></div>
+      <div id="pv-streak-section" style="display:none"><div class="sl">streak</div><div class="streak-row" id="pv-streak-dots"></div></div>
+      <div class="sl">recent sessions</div>
+      <div class="sessions-card" id="pv-sessions"></div>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="bnav-tab" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="bnav-label">today</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span class="bnav-label">history</span>
+    </button>
+    <button class="bnav-tab active" onclick="switchTab('people')">
+      <div style="position:relative;width:20px;height:20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="bnav-badge people-badge"></span></div>
+      <span class="bnav-label">people</span>
+    </button>
+    <button class="bnav-tab" onclick="switchTab('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       <span class="bnav-label">profile</span>
     </button>
@@ -709,6 +849,7 @@ function switchTab(tab){
     document.getElementById('type-btn-all').classList.add('active');
     loadHistory(true);showScreen('screen-history');
   }
+  else if(tab==='people'){loadPeople();showScreen('screen-people');}
   else if(tab==='settings'){renderSettings();showScreen('screen-settings');}
 }
 
@@ -794,43 +935,16 @@ async function handleStart(method){
 // ── END SESSION SHEET ──
 function openEndSheet(){
   if(!activeSessionId) return;
-  endTags=[];
+  endTags=[activeSessionType];
   document.getElementById('end-note').value='';
-  document.getElementById('end-tag-input').value='';
-  renderEndTags();
   document.getElementById('end-err').classList.remove('show');
   document.getElementById('end-confirm-btn').disabled=false;
   document.getElementById('end-sheet').classList.add('open');
 }
 function closeEndSheet(){document.getElementById('end-sheet').classList.remove('open');}
 
-function renderEndTags(){
-  const wrap=document.getElementById('end-tag-wrap');
-  const inp=document.getElementById('end-tag-input');
-  wrap.querySelectorAll('.tag-pill').forEach(el=>el.remove());
-  endTags.forEach((tag,i)=>{
-    const pill=document.createElement('span');
-    pill.className='tag-pill';
-    pill.innerHTML=tag+'<button type="button" onclick="endTags.splice('+i+',1);renderEndTags()">×</button>';
-    wrap.insertBefore(pill,inp);
-  });
-}
-
-document.getElementById('end-tag-input').addEventListener('keydown',e=>{
-  if(e.key==='Enter'||e.key===','||e.key===' '){
-    e.preventDefault();
-    const val=e.target.value.trim().toLowerCase().replace(/,/g,'');
-    if(val&&endTags.length<10&&!endTags.includes(val)){endTags.push(val);renderEndTags();}
-    e.target.value='';
-  }
-  if(e.key==='Backspace'&&!e.target.value&&endTags.length){endTags.pop();renderEndTags();}
-});
-
 async function confirmEnd(){
   if(!activeSessionId) return;
-  const pending=document.getElementById('end-tag-input').value.trim().toLowerCase();
-  if(pending&&!endTags.includes(pending)) endTags.push(pending);
-  document.getElementById('end-tag-input').value='';
   document.getElementById('end-confirm-btn').disabled=true;
   document.getElementById('end-err').classList.remove('show');
   const note=document.getElementById('end-note').value.trim()||null;
@@ -1321,6 +1435,176 @@ async function initNFC(){
   }catch{}
 }
 
+// ── SOCIAL / PEOPLE ──
+function updatePeopleBadge(count){
+  document.querySelectorAll('.people-badge').forEach(el=>{
+    el.textContent=count;
+    el.style.display=count>0?'block':'none';
+  });
+}
+
+async function loadPeople(){
+  try{
+    const data=await api('GET','/social/connections');
+    renderPeople(data);
+  }catch(err){showToast(err.message);}
+}
+
+function renderPeople(data){
+  const shared=data.shared||[];   // I'm sharerId (my data shared with them)
+  const received=data.received||[]; // I'm viewerId (they share data with me)
+
+  const pending_in=received.filter(c=>c.status==='pending');  // incoming: want me to see their data
+  const following=received.filter(c=>c.status==='accepted');  // I can see them
+  const sharing=shared.filter(c=>c.status==='accepted');      // they can see me
+  const pending_out=shared.filter(c=>c.status==='pending');   // waiting for them to accept seeing me
+
+  updatePeopleBadge(pending_in.length);
+
+  const el=(id,show)=>{document.getElementById(id).style.display=show?'':'none';};
+  el('people-incoming-section',pending_in.length>0);
+  el('people-following-section',following.length>0);
+  el('people-sharing-section',sharing.length>0);
+  el('people-pending-section',pending_out.length>0);
+
+  const noData=!pending_in.length&&!following.length&&!sharing.length&&!pending_out.length;
+  el('people-empty',noData);
+
+  const badge=document.getElementById('people-incoming-badge');
+  badge.textContent=pending_in.length;badge.style.display=pending_in.length?'inline':'none';
+
+  const personHtml=(c,actions)=>`
+    <div class="person-row">
+      <div class="person-avatar">${initials(c.user?.name||'?')}</div>
+      <div class="person-info">
+        <div class="person-name">${c.user?.name||'Unknown'}</div>
+        <div class="person-sub">${c.user?.email||''}</div>
+      </div>
+      <div class="person-actions">${actions}</div>
+    </div>`;
+
+  document.getElementById('people-incoming-list').innerHTML=pending_in.map(c=>personHtml(c,
+    `<button class="pa-btn pa-accept" onclick="respondConnection('${c.id}','accept')">Accept</button>
+     <button class="pa-btn pa-cancel" onclick="respondConnection('${c.id}','decline')">Decline</button>`
+  )).join('');
+
+  document.getElementById('people-following-list').innerHTML=following.map(c=>personHtml(c,
+    `<button class="pa-btn pa-view" onclick="viewUserProfile('${c.user?.id}','${(c.user?.name||'').replace(/'/g,"\\'")}')">View</button>
+     <button class="pa-btn pa-remove" onclick="removeConnection('${c.id}')">Unfollow</button>`
+  )).join('');
+
+  document.getElementById('people-sharing-list').innerHTML=sharing.map(c=>personHtml(c,
+    `<button class="pa-btn pa-remove" onclick="removeConnection('${c.id}')">Revoke</button>`
+  )).join('');
+
+  document.getElementById('people-pending-list').innerHTML=pending_out.map(c=>personHtml(c,
+    `<button class="pa-btn pa-cancel" onclick="removeConnection('${c.id}')">Cancel</button>`
+  )).join('');
+}
+
+async function sendInvite(){
+  const email=document.getElementById('invite-email').value.trim();
+  const msg=document.getElementById('invite-msg');
+  msg.className='field-msg';msg.textContent='';
+  if(!email){msg.className='field-msg err';msg.textContent='enter an email address';return;}
+  try{
+    const d=await api('POST','/social/invite',{email});
+    msg.className='field-msg ok';
+    msg.textContent=`Invite sent to ${d.targetName||email} · waiting for them to accept`;
+    document.getElementById('invite-email').value='';
+    await loadPeople();
+  }catch(err){msg.className='field-msg err';msg.textContent=err.message;}
+}
+
+async function respondConnection(id,action){
+  try{
+    await api('PATCH',`/social/connections/${id}`,{action});
+    showToast(action==='accept'?'connection accepted':'declined');
+    await loadPeople();
+  }catch(err){showToast(err.message);}
+}
+
+async function removeConnection(id){
+  try{
+    await api('DELETE',`/social/connections/${id}`);
+    showToast('connection removed');
+    await loadPeople();
+  }catch(err){showToast(err.message);}
+}
+
+async function viewUserProfile(userId,name){
+  showScreen('screen-profile-view');
+  document.getElementById('pv-name').textContent=name;
+  document.getElementById('pv-loading').style.display='block';
+  document.getElementById('pv-content').style.display='none';
+  try{
+    const d=await api('GET',`/social/users/${userId}/profile`);
+    renderProfileView(d);
+  }catch(err){
+    document.getElementById('pv-loading').textContent='could not load profile';
+  }
+}
+
+function renderProfileView(d){
+  document.getElementById('pv-loading').style.display='none';
+  document.getElementById('pv-content').style.display='block';
+
+  // Active session pill
+  if(d.activeSession){
+    document.getElementById('pv-active-text').textContent=`${d.activeSession.type==='work'?'working':'studying'} now · ${fmtHM(Math.floor((Date.now()-d.activeSession.startedAt)/1000))}`;
+    document.getElementById('pv-active-pill').style.display='flex';
+  }else{document.getElementById('pv-active-pill').style.display='none';}
+
+  document.getElementById('pv-study').textContent=d.today.study>0?fmtHM(d.today.study):'—';
+  document.getElementById('pv-work').textContent=d.today.work>0?fmtHM(d.today.work):'—';
+  document.getElementById('pv-streak').textContent=d.streak||0;
+  document.getElementById('pv-goal').textContent=d.user.goalSecs?fmtGoal(d.user.goalSecs):'—';
+
+  // Week totals
+  const weekStudy=d.weekSessions.filter(s=>s.type==='study').reduce((a,s)=>a+s.durationSecs,0);
+  const weekWork=d.weekSessions.filter(s=>s.type==='work').reduce((a,s)=>a+s.durationSecs,0);
+  document.getElementById('pv-week-total').textContent=fmtHM(weekStudy+weekWork)||'—';
+
+  // Week chart (study)
+  const wkDays=[];for(let i=6;i>=0;i--){const d2=new Date();d2.setDate(d2.getDate()-i);wkDays.push(d2.toISOString().slice(0,10));}
+  const wkSecs={};wkDays.forEach(k=>wkSecs[k]=0);
+  d.weekSessions.forEach(s=>{const k=dayKey(s.startedAt);if(k in wkSecs)wkSecs[k]+=s.durationSecs;});
+  const maxS=Math.max(...Object.values(wkSecs),1);
+  const days=['M','T','W','T','F','S','S'];
+  const barsEl=document.getElementById('pv-week-bars');barsEl.innerHTML='';
+  wkDays.forEach((k,i)=>{
+    const s=wkSecs[k],pct=Math.max(4,Math.round(s/maxS*100)),isT=k===todayKey();
+    const col=document.createElement('div');col.className='wbar-col';
+    const bar=document.createElement('div');bar.className='wbar'+(s>0?(isT?' today':' has'):'');bar.style.height=pct+'%';
+    const lbl=document.createElement('div');lbl.className='wday'+(isT?' tl':'');lbl.textContent=days[i];
+    col.appendChild(bar);col.appendChild(lbl);barsEl.appendChild(col);
+  });
+
+  // Streak dots
+  if(d.streak>0){
+    document.getElementById('pv-streak-section').style.display='block';
+    const dotsEl=document.getElementById('pv-streak-dots');dotsEl.innerHTML='';
+    const allDays=new Set(d.recent.map(s=>dayKey(s.startedAt)));
+    for(let i=6;i>=0;i--){
+      const dt=new Date();dt.setDate(dt.getDate()-i);
+      const k=dt.toISOString().slice(0,10);
+      const has=allDays.has(k);
+      const dot=document.createElement('div');
+      dot.className='streak-dot'+(has&&i!==0?' done':'')+(has&&i===0?' td':'');
+      dotsEl.appendChild(dot);
+    }
+  }else{document.getElementById('pv-streak-section').style.display='none';}
+
+  // Recent sessions
+  const sessEl=document.getElementById('pv-sessions');
+  const sessHtml=d.recent.map((s,i)=>{
+    const tags=tagsHtml(s.tags);
+    const workPill=s.type==='work'?'<span class="type-pill work">work</span>':'';
+    return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''} ${workPill||tags?`<div class="sesh-tags">${workPill}${tags}</div>`:''}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
+  }).join('');
+  sessEl.innerHTML=sessHtml||'<div class="empty-msg">no sessions yet</div>';
+}
+
 // ── BOOT ──
 async function enterApp(user){
   currentUser=user;
@@ -1331,6 +1615,11 @@ async function enterApp(user){
   initNFC();
   registerSW();
   await handleURLAction();
+  // Background: fetch people badge count
+  api('GET','/social/connections').then(d=>{
+    const pending=(d.received||[]).filter(c=>c.status==='pending').length;
+    updatePeopleBadge(pending);
+  }).catch(()=>{});
 }
 
 // Refresh session state whenever the app comes back to foreground.
