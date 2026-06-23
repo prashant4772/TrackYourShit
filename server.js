@@ -592,7 +592,9 @@ function canView(db, viewerId, sharerId) {
 function fmtConnection(db, c, perspectiveUserId) {
   const otherId = c.sharerId === perspectiveUserId ? c.viewerId : c.sharerId;
   const other = q.userById(db, otherId);
-  return { id: c.id, status: c.status, createdAt: c.createdAt, user: other ? { id: other.id, name: other.name, email: other.email } : null };
+  // nickname is always from the perspective of perspectiveUserId about the OTHER person
+  const nickname = c.viewerId === perspectiveUserId ? (c.viewerNickname || null) : (c.sharerNickname || null);
+  return { id: c.id, status: c.status, createdAt: c.createdAt, nickname, user: other ? { id: other.id, name: other.name, email: other.email } : null };
 }
 
 // Share MY data with someone → they must accept to see me
@@ -623,13 +625,25 @@ app.get('/social/connections', requireAuth, (req, res) => {
   res.json({ shared, received });
 });
 
-// Accept or decline a pending invite (only viewerId can act)
+// Accept / decline a pending invite, or set a nickname for the other person
 app.patch('/social/connections/:id', requireAuth, (req, res) => {
-  const { action } = req.body;
-  if (!['accept', 'decline'].includes(action)) return res.status(400).json({ error: 'action must be accept or decline' });
+  const { action, nickname } = req.body;
   const db = loadDB();
   const conn = (db.connections || []).find(c => c.id === req.params.id);
   if (!conn) return res.status(404).json({ error: 'connection not found' });
+
+  // Nickname update — either side can set their own label for the other person
+  if (nickname !== undefined) {
+    if (conn.sharerId !== req.userId && conn.viewerId !== req.userId) return res.status(403).json({ error: 'not your connection' });
+    const nick = nickname ? String(nickname).trim().slice(0, 50) || null : null;
+    if (conn.viewerId === req.userId) conn.viewerNickname = nick;
+    else conn.sharerNickname = nick;
+    saveDB(db);
+    return res.json({ ok: true });
+  }
+
+  // Accept / decline
+  if (!['accept', 'decline'].includes(action)) return res.status(400).json({ error: 'action must be accept or decline' });
   if (conn.viewerId !== req.userId) return res.status(403).json({ error: 'only the recipient can respond' });
   if (conn.status !== 'pending') return res.status(409).json({ error: 'not pending' });
 
@@ -683,8 +697,10 @@ app.get('/social/users/:userId/profile', requireAuth, (req, res) => {
   const recent = all.sort((a, b) => b.startedAt - a.startedAt).slice(0, 15)
     .map(s => ({ id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, durationSecs: s.durationSecs, note: s.note || null, tags: s.tags || [], type: s.type || 'study' }));
 
+  const viewConn = (db.connections || []).find(c => c.sharerId === userId && c.viewerId === req.userId && c.status === 'accepted');
   res.json({
     user: { id: user.id, name: user.name, goalSecs: user.goalSecs },
+    nickname: viewConn?.viewerNickname || null,
     today: { study: todayStudy, work: todayWork },
     streak,
     activeSession: open ? { type: open.type || 'study', startedAt: open.startedAt } : null,
@@ -779,7 +795,7 @@ app.get('/social/live', requireAuth, (req, res) => {
       const open = q.openSession(db, c.sharerId);
       if (!open) return null;
       const user = q.userById(db, c.sharerId);
-      return { userId: c.sharerId, name: user?.name || 'Unknown', type: open.type || 'study', startedAt: open.startedAt };
+      return { userId: c.sharerId, name: user?.name || 'Unknown', nickname: c.viewerNickname || null, type: open.type || 'study', startedAt: open.startedAt };
     })
     .filter(Boolean);
   res.json({ live });

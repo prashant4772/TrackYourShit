@@ -283,23 +283,30 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 #screen-dashboard.total-mode .start-core{background:var(--green);}
 #screen-dashboard.total-mode .session-timer{color:var(--green-mid);}
 #screen-dashboard.total-mode .wbar.today{background:var(--green-mid);}
-/* LIVE CONNECTIONS WIDGET */
+/* LIVE SIDE PANEL */
 @keyframes live-pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.live-now-section{margin-bottom:1rem;}
-.live-now-header{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
 .live-now-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:live-pulse 1.5s ease-in-out infinite;flex-shrink:0;}
-.live-now-label{font-size:11px;font-weight:600;color:var(--text-2);letter-spacing:.3px;text-transform:uppercase;}
-.live-now-row{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
-.live-now-row::-webkit-scrollbar{display:none;}
-.live-person-card{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:.5px solid #22c55e;border-radius:var(--radius-sm);padding:10px 12px;min-width:72px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
-.live-person-avatar{width:36px;height:36px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--purple);position:relative;}
-.live-person-avatar::after{content:'';position:absolute;bottom:0;right:0;width:9px;height:9px;border-radius:50%;background:#22c55e;border:2px solid var(--surface);}
-.live-person-name{font-size:11px;font-weight:600;color:var(--text);text-align:center;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.live-person-since{font-size:10px;color:var(--text-3);}
-.live-person-mode{font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px;}
-.live-person-mode.work{background:#EFF6FF;color:#2563EB;}
-.live-person-mode.study{background:var(--purple-light);color:var(--purple);}
-@media (prefers-color-scheme:dark){.live-person-mode.work{background:#1E2F4F;color:#93C5FD;}}
+.dash-split{display:flex;gap:10px;align-items:flex-start;}
+.dash-main{flex:1;min-width:0;}
+#live-side-panel{width:68px;flex-shrink:0;padding-top:2.5rem;}
+.live-side-header{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:10px;}
+.live-side-label{font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;}
+.live-side-card{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--surface);border:.5px solid #22c55e;border-radius:10px;padding:8px 4px;cursor:pointer;margin-bottom:8px;-webkit-tap-highlight-color:transparent;}
+.live-side-avatar{width:32px;height:32px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--purple);position:relative;}
+.live-side-avatar::after{content:'';position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;background:#22c55e;border:1.5px solid var(--surface);}
+.live-side-name{font-size:9px;font-weight:600;color:var(--text);text-align:center;width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.live-side-since{font-size:8px;color:var(--text-3);}
+.live-side-mode{font-size:7px;font-weight:700;padding:1px 4px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px;}
+.live-side-mode.work{background:#EFF6FF;color:#2563EB;}
+.live-side-mode.study{background:var(--purple-light);color:var(--purple);}
+@media (prefers-color-scheme:dark){.live-side-mode.work{background:#1E2F4F;color:#93C5FD;}}
+/* NICKNAME EDIT */
+.nick-edit-wrap{display:none;margin-top:4px;}
+.nick-edit-wrap.open{display:flex;gap:4px;align-items:center;}
+.nick-edit-input{flex:1;font-size:12px;padding:4px 7px;border:.5px solid var(--border-mid);border-radius:6px;background:var(--bg);color:var(--text);font-family:inherit;outline:none;}
+.nick-edit-input:focus{border-color:var(--purple);}
+.nick-save-btn{font-size:11px;color:var(--purple);font-weight:600;background:none;border:none;cursor:pointer;font-family:inherit;padding:4px 2px;white-space:nowrap;}
+.person-nick{font-size:11px;color:var(--text-3);font-style:italic;}
 /* PREF SELECT */
 .pref-select{background:var(--bg);border:.5px solid var(--border-mid);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;padding:5px 8px;outline:none;cursor:pointer;}
 /* SOCIAL / PEOPLE */
@@ -430,55 +437,59 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
       <button class="mode-tab" id="mode-tab-work" onclick="switchMode('work')">Work</button>
       <button class="mode-tab" id="mode-tab-total" onclick="switchMode('total')">Total</button>
     </div>
-    <div id="live-connections" style="display:none" class="live-now-section">
-      <div class="live-now-header"><div class="live-now-dot"></div><span class="live-now-label">live right now</span></div>
-      <div class="live-now-row" id="live-now-row"></div>
-    </div>
-    <div id="shortcut-banner" style="display:none" class="shortcut-banner">
-      <div class="shortcut-banner-text" id="shortcut-banner-text"></div>
-      <button class="shortcut-banner-close" onclick="this.closest('.shortcut-banner').style.display='none'">×</button>
-    </div>
-    <div class="hero-block">
-      <div class="hero-label">today</div>
-      <div class="hero-time" id="hero-time">0h 00m</div>
-      <div class="hero-sub" id="hero-sub">—</div>
-      <div class="goal-bar" id="goal-bar" style="display:none"><div class="goal-fill" id="goal-fill" style="width:0%"></div></div>
-    </div>
-    <div id="idle-state">
-      <div class="start-ring" onclick="handleStart()">
-        <button class="start-core" aria-label="start session">
-          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span>start</span>
-        </button>
+    <div class="dash-split">
+      <div class="dash-main">
+        <div id="shortcut-banner" style="display:none" class="shortcut-banner">
+          <div class="shortcut-banner-text" id="shortcut-banner-text"></div>
+          <button class="shortcut-banner-close" onclick="this.closest('.shortcut-banner').style.display='none'">×</button>
+        </div>
+        <div class="hero-block">
+          <div class="hero-label">today</div>
+          <div class="hero-time" id="hero-time">0h 00m</div>
+          <div class="hero-sub" id="hero-sub">—</div>
+          <div class="goal-bar" id="goal-bar" style="display:none"><div class="goal-fill" id="goal-fill" style="width:0%"></div></div>
+        </div>
+        <div id="idle-state">
+          <div class="start-ring" onclick="handleStart()">
+            <button class="start-core" aria-label="start session">
+              <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>start</span>
+            </button>
+          </div>
+          <div class="hint-text">tap to begin · or place phone in dock</div>
+        </div>
+        <div id="active-state" style="display:none">
+          <div class="session-timer-block">
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:5px">this session</div>
+            <div class="session-timer" id="session-timer">00:00:00</div>
+            <div class="server-tag"><span class="server-dot"></span>synced to server time</div>
+          </div>
+          <div class="cards-row">
+            <div class="card"><div class="card-label">started at</div><div class="card-val" id="active-start-time">—</div><div class="card-sub" id="active-method">manual</div></div>
+            <div class="card"><div class="card-label">today so far</div><div class="card-val" id="active-today">—</div><div class="card-sub" id="active-goal-sub">—</div></div>
+          </div>
+          <button class="end-btn" id="end-btn" onclick="openEndSheet()">end session</button>
+          <div class="hint-text">or pull phone from dock</div>
+        </div>
+        <div style="margin-top:1.25rem">
+          <div class="cards-row three">
+            <div class="card"><div class="card-label">this week</div><div class="card-val" id="stat-week">—</div></div>
+            <div class="card"><div class="card-label">streak</div><div class="card-val" id="stat-streak">0</div><div class="card-sub">days</div></div>
+            <div class="card"><div class="card-label">avg session</div><div class="card-val" id="stat-avg">—</div></div>
+          </div>
+          <div class="sl">this week</div>
+          <div class="week-card"><div class="week-bars" id="week-bars"></div></div>
+          <div id="streak-section" style="display:none"><div class="sl">streak</div><div class="streak-row" id="streak-dots"></div></div>
+          <div class="sl">today's sessions</div>
+          <div class="sessions-card" id="sessions-list"><div class="empty-msg">no sessions yet · tap start when you're ready</div></div>
+          <div id="insight-block" style="display:none"><div class="insight-card" id="insight-text"></div></div>
+          <div class="app-footer">tracl v1.5 · Jun 2026</div>
+        </div>
       </div>
-      <div class="hint-text">tap to begin · or place phone in dock</div>
-    </div>
-    <div id="active-state" style="display:none">
-      <div class="session-timer-block">
-        <div style="font-size:11px;color:var(--text-3);margin-bottom:5px">this session</div>
-        <div class="session-timer" id="session-timer">00:00:00</div>
-        <div class="server-tag"><span class="server-dot"></span>synced to server time</div>
+      <div id="live-side-panel" style="display:none">
+        <div class="live-side-header"><div class="live-now-dot"></div><span class="live-side-label">live</span></div>
+        <div id="live-side-cards"></div>
       </div>
-      <div class="cards-row">
-        <div class="card"><div class="card-label">started at</div><div class="card-val" id="active-start-time">—</div><div class="card-sub" id="active-method">manual</div></div>
-        <div class="card"><div class="card-label">today so far</div><div class="card-val" id="active-today">—</div><div class="card-sub" id="active-goal-sub">—</div></div>
-      </div>
-      <button class="end-btn" id="end-btn" onclick="openEndSheet()">end session</button>
-      <div class="hint-text">or pull phone from dock</div>
-    </div>
-    <div style="margin-top:1.25rem">
-      <div class="cards-row three">
-        <div class="card"><div class="card-label">this week</div><div class="card-val" id="stat-week">—</div></div>
-        <div class="card"><div class="card-label">streak</div><div class="card-val" id="stat-streak">0</div><div class="card-sub">days</div></div>
-        <div class="card"><div class="card-label">avg session</div><div class="card-val" id="stat-avg">—</div></div>
-      </div>
-      <div class="sl">this week</div>
-      <div class="week-card"><div class="week-bars" id="week-bars"></div></div>
-      <div id="streak-section" style="display:none"><div class="sl">streak</div><div class="streak-row" id="streak-dots"></div></div>
-      <div class="sl">today's sessions</div>
-      <div class="sessions-card" id="sessions-list"><div class="empty-msg">no sessions yet · tap start when you're ready</div></div>
-      <div id="insight-block" style="display:none"><div class="insight-card" id="insight-text"></div></div>
-      <div class="app-footer">tracl v1.5 · Jun 2026</div>
     </div>
   </div>
   <nav class="bottom-nav">
@@ -871,7 +882,7 @@ function parseGoalSecs(str){
   const m=str.match(/^(\d+)m$/); if(m) return parseInt(m[1])*60;
   return 18000;
 }
-function tagsHtml(tags){return(tags||[]).map(t=>`<span class="tag-chip">${t}</span>`).join('');}
+function tagsHtml(tags){return(tags||[]).filter(t=>t!=='study'&&t!=='work').map(t=>`<span class="tag-chip">${t}</span>`).join('');}
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 function hideLoading(){document.getElementById('loading').style.display='none';}
@@ -1090,12 +1101,18 @@ function renderDashboard(){
   if(!isActive){
     const ring=document.querySelector('#idle-state .start-ring');
     const hint=document.querySelector('#idle-state .hint-text');
-    if(wrongModeActive){
-      ring.style.opacity='0.35';ring.style.pointerEvents='none';
-      hint.textContent=activeSessionType+' session in progress · end it first';
+    if(isTotal){
+      ring.style.display='none';
+      hint.textContent='switch to Study or Work tab to start a session';
     }else{
-      ring.style.opacity='';ring.style.pointerEvents='';
-      hint.textContent=isWork?'tap to begin a work session':isTotal?'tap to start a study session':'tap to begin · or place phone in dock';
+      ring.style.display='';
+      if(wrongModeActive){
+        ring.style.opacity='0.35';ring.style.pointerEvents='none';
+        hint.textContent=activeSessionType+' session in progress · end it first';
+      }else{
+        ring.style.opacity='';ring.style.pointerEvents='';
+        hint.textContent=isWork?'tap to begin a work session':'tap to begin · or place phone in dock';
+      }
     }
   }
 
@@ -1512,15 +1529,27 @@ function renderPeople(data){
   const badge=document.getElementById('people-incoming-badge');
   badge.textContent=pending_in.length;badge.style.display=pending_in.length?'inline':'none';
 
-  const personHtml=(c,actions)=>`
-    <div class="person-row">
-      <div class="person-avatar">${initials(c.user?.name||'?')}</div>
+  const personHtml=(c,actions)=>{
+    const realName=c.user?.name||'Unknown';
+    const nick=c.nickname||null;
+    const displayName=nick||realName;
+    return `<div class="person-row">
+      <div class="person-avatar">${initials(displayName)}</div>
       <div class="person-info">
-        <div class="person-name">${c.user?.name||'Unknown'}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="person-name">${displayName}</div>
+          <button style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:11px;padding:0;font-family:inherit;line-height:1" onclick="openNickEdit('${c.id}')">edit</button>
+        </div>
+        ${nick?`<div class="person-nick">${realName}</div>`:''}
         <div class="person-sub">${c.user?.email||''}</div>
+        <div class="nick-edit-wrap" id="nick-wrap-${c.id}">
+          <input class="nick-edit-input" id="nick-inp-${c.id}" placeholder="nickname (leave empty to remove)" value="${nick||''}" maxlength="50">
+          <button class="nick-save-btn" onclick="saveNickServer('${c.id}')">save</button>
+        </div>
       </div>
       <div class="person-actions">${actions}</div>
     </div>`;
+  };
 
   document.getElementById('people-incoming-list').innerHTML=pending_in.map(c=>personHtml(c,
     `<button class="pa-btn pa-accept" onclick="respondConnection('${c.id}','accept')">Accept</button>
@@ -1528,7 +1557,7 @@ function renderPeople(data){
   )).join('');
 
   document.getElementById('people-following-list').innerHTML=following.map(c=>personHtml(c,
-    `<button class="pa-btn pa-view" onclick="viewUserProfile('${c.user?.id}','${(c.user?.name||'').replace(/'/g,"\\'")}')">View</button>
+    `<button class="pa-btn pa-view" onclick="viewUserProfile('${c.user?.id}','${(c.user?.name||'').replace(/'/g,"\\'")}','${(c.nickname||'').replace(/'/g,"\\'")}')">View</button>
      <button class="pa-btn pa-remove" onclick="removeConnection('${c.id}')">Unfollow</button>`
   )).join('');
 
@@ -1571,13 +1600,14 @@ async function removeConnection(id){
   }catch(err){showToast(err.message);}
 }
 
-async function viewUserProfile(userId,name){
+async function viewUserProfile(userId,name,nick){
   showScreen('screen-profile-view');
-  document.getElementById('pv-name').textContent=name;
+  document.getElementById('pv-name').textContent=nick||name;
   document.getElementById('pv-loading').style.display='block';
   document.getElementById('pv-content').style.display='none';
   try{
     const d=await api('GET',`/social/users/${userId}/profile`);
+    if(d.nickname) document.getElementById('pv-name').textContent=d.nickname;
     renderProfileView(d);
   }catch(err){
     document.getElementById('pv-loading').textContent='could not load profile';
@@ -1644,6 +1674,24 @@ function renderProfileView(d){
   sessEl.innerHTML=sessHtml||'<div class="empty-msg">no sessions yet</div>';
 }
 
+function openNickEdit(connId){
+  const wrap=document.getElementById('nick-wrap-'+connId);
+  const open=wrap.classList.contains('open');
+  wrap.classList.toggle('open',!open);
+  if(!open) setTimeout(()=>document.getElementById('nick-inp-'+connId)?.focus(),50);
+}
+
+async function saveNickServer(connId){
+  const inp=document.getElementById('nick-inp-'+connId);
+  if(!inp) return;
+  const nick=inp.value.trim()||null;
+  try{
+    await api('PATCH',`/social/connections/${connId}`,{nickname:nick});
+    showToast(nick?'nickname saved':'nickname removed');
+    loadPeople();
+  }catch(err){showToast(err.message);}
+}
+
 // ── LIVE CONNECTIONS ──
 async function loadLiveConnections(){
   try{
@@ -1653,16 +1701,18 @@ async function loadLiveConnections(){
 }
 
 function renderLiveConnections(live){
-  const el=document.getElementById('live-connections');
+  const el=document.getElementById('live-side-panel');
   if(!live.length){el.style.display='none';return;}
   el.style.display='block';
-  document.getElementById('live-now-row').innerHTML=live.map(p=>`
-    <div class="live-person-card" onclick="viewUserProfile('${p.userId}','${(p.name||'').replace(/'/g,"\\'")}')">
-      <div class="live-person-avatar">${initials(p.name||'?')}</div>
-      <div class="live-person-name">${p.name||'Unknown'}</div>
-      <div class="live-person-since">${fmtHM(Math.max(1,Math.floor((Date.now()-p.startedAt)/1000)))}</div>
-      <div class="live-person-mode ${p.type==='work'?'work':'study'}">${p.type==='work'?'work':'study'}</div>
-    </div>`).join('');
+  document.getElementById('live-side-cards').innerHTML=live.map(p=>{
+    const displayName=p.nickname||p.name||'Unknown';
+    return `<div class="live-side-card" onclick="viewUserProfile('${p.userId}','${(p.name||'').replace(/'/g,"\\'")}','${(p.nickname||'').replace(/'/g,"\\'")}')">
+      <div class="live-side-avatar">${initials(displayName)}</div>
+      <div class="live-side-name">${displayName}</div>
+      <div class="live-side-since">${fmtHM(Math.max(60,Math.floor((Date.now()-p.startedAt)/1000)))}</div>
+      <div class="live-side-mode ${p.type==='work'?'work':'study'}">${p.type==='work'?'work':'study'}</div>
+    </div>`;
+  }).join('');
 }
 
 // ── BOOT ──
