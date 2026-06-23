@@ -568,7 +568,7 @@ async function api(method,path,body){
   const tok=getToken(); if(tok) opts.headers['Authorization']='Bearer '+tok;
   if(body) opts.body=JSON.stringify(body);
   const res=await fetch(API+path,opts);
-  const data=await res.json();
+  let data; try{data=await res.json();}catch{data={};}
   if(!res.ok) throw new Error(data.error||'request failed');
   return data;
 }
@@ -728,15 +728,34 @@ async function confirmEnd(){
   if(pending&&!endTags.includes(pending)) endTags.push(pending);
   document.getElementById('end-tag-input').value='';
   document.getElementById('end-confirm-btn').disabled=true;
+  document.getElementById('end-err').classList.remove('show');
   const note=document.getElementById('end-note').value.trim()||null;
-  try{
-    const data=await api('POST','/sessions/end',{sessionId:activeSessionId,note,tags:endTags});
-    closeEndSheet();clearInterval(tickInterval);
-    if(data.discarded){activeSessionId=null;activeStartedAt=null;await loadTodaySessions();renderDashboard();return;}
-    await loadTodaySessions();showSummary(data);activeSessionId=null;activeStartedAt=null;
-  }catch(err){
-    const el=document.getElementById('end-err');el.textContent=err.message;el.classList.add('show');
-    document.getElementById('end-confirm-btn').disabled=false;
+  const sid=activeSessionId;
+
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      const data=await api('POST','/sessions/end',{sessionId:sid,note,tags:endTags});
+      closeEndSheet();clearInterval(tickInterval);
+      if(data.discarded){activeSessionId=null;activeStartedAt=null;await loadTodaySessions();renderDashboard();return;}
+      await loadTodaySessions();showSummary(data);activeSessionId=null;activeStartedAt=null;
+      return;
+    }catch(err){
+      // Session already gone — clear state and close sheet gracefully
+      if(err.message==='session not found'||err.message==='session already ended'){
+        closeEndSheet();clearInterval(tickInterval);
+        activeSessionId=null;activeStartedAt=null;
+        await loadTodaySessions();renderDashboard();
+        showToast('session already ended');
+        return;
+      }
+      // Network error — wait and retry once (iOS drops requests when waking from sleep)
+      if(attempt===0){await new Promise(r=>setTimeout(r,1500));continue;}
+      // Both attempts failed
+      const el=document.getElementById('end-err');
+      el.textContent='Connection error — tap to try again';
+      el.classList.add('show');
+      document.getElementById('end-confirm-btn').disabled=false;
+    }
   }
 }
 
@@ -1047,11 +1066,14 @@ async function enterApp(user){
   await handleURLAction();
 }
 
-// When iOS brings the PWA back to foreground via a Shortcut URL, the page
-// doesn't reload — but the URL does change. Re-check on visibility change.
+// Refresh session state whenever the app comes back to foreground.
+// On iOS, fetch requests fired immediately after waking fail ("Load failed"),
+// so we re-sync state here before the user can tap anything.
 document.addEventListener('visibilitychange',async()=>{
-  if(document.visibilityState==='visible'&&currentUser&&window.location.search){
-    await handleURLAction();
+  if(document.visibilityState==='visible'&&currentUser){
+    await loadTodaySessions();
+    renderDashboard();
+    if(window.location.search) await handleURLAction();
   }
 });
 
