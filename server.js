@@ -770,6 +770,21 @@ app.get('/admin/stats', (req, res) => {
   });
 });
 
+// Live status of people whose data I can view
+app.get('/social/live', requireAuth, (req, res) => {
+  const db = loadDB();
+  const live = (db.connections || [])
+    .filter(c => c.viewerId === req.userId && c.status === 'accepted')
+    .map(c => {
+      const open = q.openSession(db, c.sharerId);
+      if (!open) return null;
+      const user = q.userById(db, c.sharerId);
+      return { userId: c.sharerId, name: user?.name || 'Unknown', type: open.type || 'study', startedAt: open.startedAt };
+    })
+    .filter(Boolean);
+  res.json({ live });
+});
+
 app.get('/health', (_req, res) => res.json({ ok: true, time: Date.now() }));
 
 // One-time migration: tag existing sessions with 'study' or 'work' based on their type field

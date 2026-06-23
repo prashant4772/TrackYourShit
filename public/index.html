@@ -277,6 +277,31 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 .type-btn{flex:1;padding:6px 0;border:none;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text-2);background:transparent;transition:all .15s;}
 .type-btn.active{background:var(--purple);color:#fff;}
 .type-btn.active-work{background:#2563EB;color:#fff;}
+/* TOTAL MODE */
+#screen-dashboard.total-mode .mode-tab.active{background:var(--green);color:#fff;}
+#screen-dashboard.total-mode .hero-time.active{color:var(--green-mid);}
+#screen-dashboard.total-mode .start-core{background:var(--green);}
+#screen-dashboard.total-mode .session-timer{color:var(--green-mid);}
+#screen-dashboard.total-mode .wbar.today{background:var(--green-mid);}
+/* LIVE CONNECTIONS WIDGET */
+@keyframes live-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.live-now-section{margin-bottom:1rem;}
+.live-now-header{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.live-now-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:live-pulse 1.5s ease-in-out infinite;flex-shrink:0;}
+.live-now-label{font-size:11px;font-weight:600;color:var(--text-2);letter-spacing:.3px;text-transform:uppercase;}
+.live-now-row{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+.live-now-row::-webkit-scrollbar{display:none;}
+.live-person-card{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:.5px solid #22c55e;border-radius:var(--radius-sm);padding:10px 12px;min-width:72px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.live-person-avatar{width:36px;height:36px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--purple);position:relative;}
+.live-person-avatar::after{content:'';position:absolute;bottom:0;right:0;width:9px;height:9px;border-radius:50%;background:#22c55e;border:2px solid var(--surface);}
+.live-person-name{font-size:11px;font-weight:600;color:var(--text);text-align:center;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.live-person-since{font-size:10px;color:var(--text-3);}
+.live-person-mode{font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px;}
+.live-person-mode.work{background:#EFF6FF;color:#2563EB;}
+.live-person-mode.study{background:var(--purple-light);color:var(--purple);}
+@media (prefers-color-scheme:dark){.live-person-mode.work{background:#1E2F4F;color:#93C5FD;}}
+/* PREF SELECT */
+.pref-select{background:var(--bg);border:.5px solid var(--border-mid);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;padding:5px 8px;outline:none;cursor:pointer;}
 /* SOCIAL / PEOPLE */
 .bnav-tab{position:relative;}
 .bnav-badge{position:absolute;top:0px;right:calc(50% - 16px);background:#C0392B;color:#fff;font-size:9px;font-weight:700;min-width:14px;height:14px;border-radius:7px;text-align:center;line-height:14px;padding:0 3px;border:1.5px solid var(--bg);display:none;}
@@ -403,6 +428,11 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     <div class="mode-switch">
       <button class="mode-tab active" id="mode-tab-study" onclick="switchMode('study')">Study</button>
       <button class="mode-tab" id="mode-tab-work" onclick="switchMode('work')">Work</button>
+      <button class="mode-tab" id="mode-tab-total" onclick="switchMode('total')">Total</button>
+    </div>
+    <div id="live-connections" style="display:none" class="live-now-section">
+      <div class="live-now-header"><div class="live-now-dot"></div><span class="live-now-label">live right now</span></div>
+      <div class="live-now-row" id="live-now-row"></div>
     </div>
     <div id="shortcut-banner" style="display:none" class="shortcut-banner">
       <div class="shortcut-banner-text" id="shortcut-banner-text"></div>
@@ -483,11 +513,6 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     </div>
   </nav>
   <div class="app-body">
-    <div class="type-filter">
-      <button class="type-btn active" id="type-btn-all" onclick="setHistType(null)">All</button>
-      <button class="type-btn" id="type-btn-study" onclick="setHistType('study')">Study</button>
-      <button class="type-btn" id="type-btn-work" onclick="setHistType('work')">Work</button>
-    </div>
     <div class="history-filter" id="tag-filters"></div>
     <div id="history-list"></div>
     <div class="empty-msg" id="history-empty" style="display:none;padding:3rem 0">no sessions yet</div>
@@ -589,6 +614,20 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
           <div style="padding:0 14px 12px;margin-top:4px">
             <button class="settings-row-btn" onclick="sendTestNotif()" style="font-size:12px;color:var(--text-3)">send test notification</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">preferences</div>
+      <div class="settings-card">
+        <div class="toggle-row">
+          <div><div class="toggle-label">default tab</div><div class="toggle-sub">tab shown on launch</div></div>
+          <select id="default-mode-select" class="pref-select" onchange="saveDefaultMode(this.value)">
+            <option value="study">Study</option>
+            <option value="work">Work</option>
+            <option value="total">Total</option>
+          </select>
         </div>
       </div>
     </div>
@@ -786,10 +825,10 @@ const API = (window.location.hostname==='localhost'||window.location.hostname===
 
 // ── STATE ──
 let currentUser=null, activeSessionId=null, activeStartedAt=null, activeSessionType='study';
-let todaySessions=[], tickInterval=null, sseSource=null;
-let currentMode='study'; // 'study' | 'work'
+let todaySessions=[], tickInterval=null, sseSource=null, liveConnInterval=null;
+let currentMode=localStorage.getItem('defaultMode')||'study'; // 'study' | 'work' | 'total'
 let endTags=[];
-let histPage=1, histTotal=0, histTag=null, histType=null, histSessions=[];
+let histPage=1, histTotal=0, histTag=null, histSessions=[];
 const HIST_LIMIT=20;
 
 const TOKEN_KEY='tracl_token';
@@ -844,9 +883,7 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 function switchTab(tab){
   if(tab==='dashboard'){renderDashboard();showScreen('screen-dashboard');}
   else if(tab==='history'){
-    histTag=null;histType=null;
-    ['all','study','work'].forEach(t=>{const b=document.getElementById('type-btn-'+t);if(b){b.classList.remove('active','active-work');}});
-    document.getElementById('type-btn-all').classList.add('active');
+    histTag=null;
     loadHistory(true);showScreen('screen-history');
   }
   else if(tab==='people'){loadPeople();showScreen('screen-people');}
@@ -863,7 +900,7 @@ function connectSSE(){
     if(!activeSessionId){
       activeSessionId=d.sessionId;activeStartedAt=d.startedAt;
       activeSessionType=d.type||'study';
-      if(currentMode!==activeSessionType){currentMode=activeSessionType;updateModeTabs();}
+      if(currentMode!=='total'&&currentMode!==activeSessionType){currentMode=activeSessionType;updateModeTabs();}
       renderDashboard();showToast('session started on another device');
     }
   });
@@ -923,9 +960,10 @@ function handleLogout(){
 // ── SESSION ──
 async function handleStart(method){
   if(activeSessionId) return;
+  const startType=currentMode==='total'?'study':currentMode;
   try{
-    const data=await api('POST','/sessions/start',{method:method||'manual',type:currentMode});
-    activeSessionId=data.sessionId;activeStartedAt=data.startedAt;activeSessionType=currentMode;
+    const data=await api('POST','/sessions/start',{method:method||'manual',type:startType});
+    activeSessionId=data.sessionId;activeStartedAt=data.startedAt;activeSessionType=startType;
     renderDashboard();
   }catch(err){
     if(err.message&&err.message.includes('already active')){await loadTodaySessions();renderDashboard();}
@@ -1030,20 +1068,21 @@ async function handleStartAnother(){switchTab('dashboard');await handleStart('ma
 function renderDashboard(){
   if(!currentUser) return;
   const isWork=currentMode==='work';
+  const isTotal=currentMode==='total';
   const goalSecs=currentUser.goalSecs||18000;
   document.getElementById('nav-avatar').textContent=initials(currentUser.name);
 
-  const modeSessions=todaySessions.filter(s=>(s.type||'study')===currentMode);
+  const modeSessions=isTotal?todaySessions:todaySessions.filter(s=>(s.type||'study')===currentMode);
   const todayTotal=modeSessions.reduce((a,s)=>a+s.durationSecs,0);
-  const isActive=!!activeSessionId&&activeSessionType===currentMode;
-  const wrongModeActive=!!activeSessionId&&activeSessionType!==currentMode;
+  const isActive=isTotal?!!activeSessionId:(!!activeSessionId&&activeSessionType===currentMode);
+  const wrongModeActive=!isTotal&&!!activeSessionId&&activeSessionType!==currentMode;
   const sessionSecs=isActive?Math.floor((Date.now()-activeStartedAt)/1000):0;
   const displayTotal=todayTotal+sessionSecs;
 
   document.getElementById('hero-time').textContent=fmtHM(displayTotal);
   document.getElementById('hero-time').classList.toggle('active',isActive);
   document.getElementById('nav-live').style.display=isActive?'flex':'none';
-  if(!isWork&&goalSecs>0){document.getElementById('goal-bar').style.display='block';document.getElementById('goal-fill').style.width=Math.min(100,Math.round(displayTotal/goalSecs*100))+'%';}
+  if(!isWork&&!isTotal&&goalSecs>0){document.getElementById('goal-bar').style.display='block';document.getElementById('goal-fill').style.width=Math.min(100,Math.round(displayTotal/goalSecs*100))+'%';}
   else{document.getElementById('goal-bar').style.display='none';}
   document.getElementById('idle-state').style.display=isActive?'none':'block';
   document.getElementById('active-state').style.display=isActive?'block':'none';
@@ -1056,33 +1095,38 @@ function renderDashboard(){
       hint.textContent=activeSessionType+' session in progress · end it first';
     }else{
       ring.style.opacity='';ring.style.pointerEvents='';
-      hint.textContent=isWork?'tap to begin a work session':'tap to begin · or place phone in dock';
+      hint.textContent=isWork?'tap to begin a work session':isTotal?'tap to start a study session':'tap to begin · or place phone in dock';
     }
   }
 
   if(isActive){
     document.getElementById('active-start-time').textContent=fmtTime(activeStartedAt);
     document.getElementById('active-today').textContent=fmtHM(displayTotal);
-    document.getElementById('active-goal-sub').textContent=isWork?'tracking':'goal · '+fmtHM(goalSecs);
+    document.getElementById('active-goal-sub').textContent=(isWork||isTotal)?'tracking':'goal · '+fmtHM(goalSecs);
     document.getElementById('end-btn').disabled=false;
-    startTick(isWork?0:goalSecs,todayTotal);
+    startTick((isWork||isTotal)?0:goalSecs,todayTotal);
   }else{clearInterval(tickInterval);}
 
   document.getElementById('hero-sub').textContent='loading...';
-  fetchWeekAndRender(isWork?0:goalSecs,todayTotal,isActive);
+  fetchWeekAndRender((isWork||isTotal)?0:goalSecs,todayTotal,isActive);
 
   const sorted=[...modeSessions].sort((a,b)=>b.startedAt-a.startedAt);
   const listEl=document.getElementById('sessions-list');
-  const emptyMsg=isWork?'no work sessions yet · tap start when you\'re ready':'no sessions yet · tap start when you\'re ready';
+  const emptyMsg=isWork?'no work sessions yet · tap start when you\'re ready':isTotal?'no sessions yet today':'no sessions yet · tap start when you\'re ready';
   listEl.innerHTML=sorted.length===0
     ?`<div class="empty-msg">${emptyMsg}</div>`
     :sorted.map((s,i)=>{
       const tags=tagsHtml(s.tags);
-      return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''} ${tags?`<div class="sesh-tags">${tags}</div>`:''}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
+      const typePill=isTotal&&(s.type||'study')==='work'?'<span class="type-pill work">work</span>':'';
+      return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''} ${typePill||tags?`<div class="sesh-tags">${typePill}${tags}</div>`:''}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
     }).join('');
 
   if(modeSessions.length>0&&!isActive){
-    if(isWork){
+    if(isTotal){
+      const studyT=todaySessions.filter(s=>(s.type||'study')==='study').reduce((a,s)=>a+s.durationSecs,0);
+      const workT=todaySessions.filter(s=>s.type==='work').reduce((a,s)=>a+s.durationSecs,0);
+      document.getElementById('insight-text').innerHTML=`study <strong>${fmtHM(studyT)}</strong> · work <strong>${fmtHM(workT)}</strong>`;
+    }else if(isWork){
       document.getElementById('insight-text').innerHTML=`You've worked <strong>${fmtHM(todayTotal)}</strong> today.`;
     }else{
       const rem=goalSecs-todayTotal;
@@ -1094,7 +1138,8 @@ function renderDashboard(){
 
 async function fetchWeekAndRender(goalSecs,todayTotal,isActive){
   try{
-    const [wk,st]=await Promise.all([api('GET',`/sessions/week?type=${currentMode}`),api('GET',`/sessions/stats?type=${currentMode}`)]);
+    const typeQ=currentMode==='total'?'':'?type='+currentMode;
+    const [wk,st]=await Promise.all([api('GET',`/sessions/week${typeQ}`),api('GET',`/sessions/stats${typeQ}`)]);
     const sessions=wk.sessions||[];
     const dayTotals={};sessions.forEach(s=>{const k=dayKey(s.startedAt);dayTotals[k]=(dayTotals[k]||0)+s.durationSecs;});
     const best=Math.max(...Object.values(dayTotals),0);
@@ -1151,8 +1196,7 @@ async function loadHistory(reset){
   if(reset){histPage=1;histTotal=0;histSessions=[];document.getElementById('history-list').innerHTML='';document.getElementById('history-empty').style.display='none';document.getElementById('load-more-btn').style.display='none';renderTagFilters();}
   try{
     const tagQ=histTag?'&tag='+encodeURIComponent(histTag):'';
-    const typeQ=histType?'&type='+histType:'';
-    const data=await api('GET',`/sessions/history?page=${histPage}&limit=${HIST_LIMIT}${tagQ}${typeQ}`);
+    const data=await api('GET',`/sessions/history?page=${histPage}&limit=${HIST_LIMIT}${tagQ}`);
     histTotal=data.total;
     histSessions=[...histSessions,...(data.sessions||[])];
     histPage++;
@@ -1175,7 +1219,7 @@ function renderHistoryList(){
     const card=document.createElement('div');card.className='history-card';
     groups[dk].sort((a,b)=>b.startedAt-a.startedAt).forEach(s=>{
       const tags=tagsHtml(s.tags);
-      const workPill=histType===null&&(s.type||'study')==='work'?'<span class="type-pill work">work</span>':'';
+      const workPill=(s.type||'study')==='work'?'<span class="type-pill work">work</span>':'';
       const row=document.createElement('div');row.className='history-row';
       row.innerHTML=`<div class="history-info"><div class="history-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="history-note">${s.note}</div>`:''} ${workPill||tags?`<div class="history-tags">${workPill}${tags}</div>`:''}</div><div class="history-dur">${fmtHM(s.durationSecs)}</div>`;
       card.appendChild(row);
@@ -1209,6 +1253,7 @@ function renderSettings(){
   document.getElementById('disp-name').textContent=currentUser.name;
   document.getElementById('disp-goal').textContent=fmtGoal(currentUser.goalSecs||18000);
   document.getElementById('disp-email').textContent=currentUser.email;
+  document.getElementById('default-mode-select').value=localStorage.getItem('defaultMode')||'study';
   loadStats();
   renderNotifSettings();
 }
@@ -1395,10 +1440,12 @@ async function sendTestNotif(){
 
 // ── MODE ──
 function updateModeTabs(){
-  const isWork=currentMode==='work';
-  document.getElementById('mode-tab-study').classList.toggle('active',!isWork);
+  const isWork=currentMode==='work',isTotal=currentMode==='total';
+  document.getElementById('mode-tab-study').classList.toggle('active',currentMode==='study');
   document.getElementById('mode-tab-work').classList.toggle('active',isWork);
+  document.getElementById('mode-tab-total').classList.toggle('active',isTotal);
   document.getElementById('screen-dashboard').classList.toggle('work-mode',isWork);
+  document.getElementById('screen-dashboard').classList.toggle('total-mode',isTotal);
 }
 
 function switchMode(mode){
@@ -1408,16 +1455,8 @@ function switchMode(mode){
   renderDashboard();
 }
 
-function setHistType(type){
-  histType=type;
-  ['all','study','work'].forEach(t=>{
-    const b=document.getElementById('type-btn-'+t);
-    if(b){b.classList.remove('active','active-work');}
-  });
-  if(type===null) document.getElementById('type-btn-all').classList.add('active');
-  else if(type==='study') document.getElementById('type-btn-study').classList.add('active');
-  else document.getElementById('type-btn-work').classList.add('active-work');
-  loadHistory(true);
+function saveDefaultMode(val){
+  localStorage.setItem('defaultMode',val);
 }
 
 // ── NFC ──
@@ -1605,9 +1644,31 @@ function renderProfileView(d){
   sessEl.innerHTML=sessHtml||'<div class="empty-msg">no sessions yet</div>';
 }
 
+// ── LIVE CONNECTIONS ──
+async function loadLiveConnections(){
+  try{
+    const d=await api('GET','/social/live');
+    renderLiveConnections(d.live||[]);
+  }catch(e){}
+}
+
+function renderLiveConnections(live){
+  const el=document.getElementById('live-connections');
+  if(!live.length){el.style.display='none';return;}
+  el.style.display='block';
+  document.getElementById('live-now-row').innerHTML=live.map(p=>`
+    <div class="live-person-card" onclick="viewUserProfile('${p.userId}','${(p.name||'').replace(/'/g,"\\'")}')">
+      <div class="live-person-avatar">${initials(p.name||'?')}</div>
+      <div class="live-person-name">${p.name||'Unknown'}</div>
+      <div class="live-person-since">${fmtHM(Math.max(1,Math.floor((Date.now()-p.startedAt)/1000)))}</div>
+      <div class="live-person-mode ${p.type==='work'?'work':'study'}">${p.type==='work'?'work':'study'}</div>
+    </div>`).join('');
+}
+
 // ── BOOT ──
 async function enterApp(user){
   currentUser=user;
+  updateModeTabs();
   await loadTodaySessions();
   renderDashboard();
   showScreen('screen-dashboard');
@@ -1615,11 +1676,14 @@ async function enterApp(user){
   initNFC();
   registerSW();
   await handleURLAction();
-  // Background: fetch people badge count
+  // Background: people badge + live connections
   api('GET','/social/connections').then(d=>{
     const pending=(d.received||[]).filter(c=>c.status==='pending').length;
     updatePeopleBadge(pending);
   }).catch(()=>{});
+  loadLiveConnections();
+  clearInterval(liveConnInterval);
+  liveConnInterval=setInterval(loadLiveConnections,30000);
 }
 
 // Refresh session state whenever the app comes back to foreground.
