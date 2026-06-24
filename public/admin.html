@@ -187,6 +187,45 @@
       </div>
     </div>
 
+    <!-- WORK FEATURE ALLOWLIST -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">Work Tab Access</div>
+      </div>
+      <div class="settings-card">
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div class="settings-row-label">Allowed Users</div>
+          <div class="settings-row-sub">Enter email or user ID to unlock the Work tab for that user.</div>
+          <div id="work-allowlist" style="display:flex;flex-wrap:wrap;gap:6px;min-height:22px"></div>
+          <div style="display:flex;gap:8px;width:100%">
+            <input class="settings-input" type="text" id="work-user-input" placeholder="email or user ID" style="flex:1;width:auto">
+            <button class="save-btn" onclick="addWorkUser()">Add</button>
+          </div>
+          <div class="settings-msg" id="work-msg"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">Edit User</div>
+    <div style="margin-bottom:1rem">
+      <div class="login-label" style="margin-bottom:5px">Name</div>
+      <input class="login-input" type="text" id="edit-name-input" maxlength="64">
+    </div>
+    <div style="margin-bottom:1.25rem">
+      <div class="login-label" style="margin-bottom:5px">Username (leave blank to remove)</div>
+      <input class="login-input" type="text" id="edit-username-input" maxlength="20" placeholder="letters, numbers, _" autocapitalize="none">
+    </div>
+    <div class="settings-msg" id="edit-msg" style="margin-bottom:8px"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="modal-confirm" style="background:var(--purple)" onclick="confirmEdit()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -289,17 +328,19 @@
       const liveBadge = u.isLive
         ? `<span class="live-badge ${u.liveType === 'work' ? 'work-badge' : ''}"><span class="live-dot-sm"></span>${u.liveType || 'study'}</span>`
         : '';
+      const unTag = u.username ? `<span style="color:var(--purple);font-size:10px;margin-left:4px">@${esc(u.username)}</span>` : '';
       return `<div class="table-row">
         <div><div class="user-av">${av}</div></div>
         <div style="overflow:hidden">
-          <div class="td" style="font-weight:500">${esc(u.name)} ${liveBadge}</div>
+          <div class="td" style="font-weight:500">${esc(u.name)}${unTag} ${liveBadge}</div>
           <div class="td mono">${esc(u.email)}</div>
         </div>
         <div class="td dim">${joined}</div>
         <div class="td dim">${u.sessions}</div>
         <div class="td dim">${u.totalHours}h</div>
         <div class="td dim col-last">${lastActive}</div>
-        <div class="col-del" style="display:flex;justify-content:flex-end">
+        <div class="col-del" style="display:flex;justify-content:flex-end;gap:4px">
+          <button class="del-btn" title="Edit user" onclick="openEditModal('${u.id}','${esc(u.name)}','${esc(u.username||'')}')">✎</button>
           <button class="del-btn" title="Delete user" onclick="openDeleteModal('${u.id}','${esc(u.name)}','${esc(u.email)}')">✕</button>
         </div>
       </div>`;
@@ -340,11 +381,82 @@
     if (e.target === document.getElementById('del-modal')) closeDeleteModal();
   });
 
+  // ── EDIT USER ──
+  let editTargetId = null;
+  function openEditModal(id, name, username) {
+    editTargetId = id;
+    document.getElementById('edit-name-input').value = name;
+    document.getElementById('edit-username-input').value = username;
+    document.getElementById('edit-msg').textContent = '';
+    document.getElementById('edit-modal').classList.add('open');
+  }
+  function closeEditModal() {
+    document.getElementById('edit-modal').classList.remove('open');
+    editTargetId = null;
+  }
+  async function confirmEdit() {
+    if (!editTargetId) return;
+    const name = document.getElementById('edit-name-input').value.trim();
+    const username = document.getElementById('edit-username-input').value.trim() || null;
+    const msg = document.getElementById('edit-msg');
+    msg.className = 'settings-msg'; msg.textContent = '';
+    if (!name) { msg.className = 'settings-msg settings-err'; msg.textContent = 'Name required.'; return; }
+    try {
+      await aFetch('PATCH', `/admin/users/${editTargetId}`, { name, username });
+      closeEditModal();
+      await loadUsers(document.getElementById('search-input').value.trim());
+    } catch (e) {
+      msg.className = 'settings-msg settings-err'; msg.textContent = e.message;
+    }
+  }
+  document.getElementById('edit-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('edit-modal')) closeEditModal();
+  });
+
   // ── SETTINGS ──
+  let workAllowlist = [];
+
   async function loadSettings() {
     const d = await aFetch('GET', '/admin/settings');
     document.getElementById('app-name-input').value = d.settings?.appName || '';
     document.getElementById('app-name-input').placeholder = 'tracl';
+    workAllowlist = d.settings?.workAllowlist || [];
+    renderWorkAllowlist();
+  }
+
+  function renderWorkAllowlist() {
+    const el = document.getElementById('work-allowlist');
+    if (!el) return;
+    if (!workAllowlist.length) { el.innerHTML = '<span style="font-size:12px;color:var(--text3)">none yet</span>'; return; }
+    el.innerHTML = workAllowlist.map(e =>
+      `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(124,111,247,.15);color:var(--purple);font-size:12px;padding:3px 8px;border-radius:99px;">
+        ${esc(e)}
+        <button onclick="removeWorkUser('${esc(e)}')" style="background:none;border:none;color:rgba(124,111,247,.6);cursor:pointer;font-size:13px;line-height:1;padding:0">×</button>
+      </span>`
+    ).join('');
+  }
+
+  async function addWorkUser() {
+    const val = document.getElementById('work-user-input').value.trim().toLowerCase();
+    const msg = document.getElementById('work-msg');
+    msg.className = 'settings-msg'; msg.textContent = '';
+    if (!val) return;
+    try {
+      const d = await aFetch('PATCH', '/admin/settings', { addWorkUser: val });
+      workAllowlist = d.settings?.workAllowlist || [];
+      renderWorkAllowlist();
+      document.getElementById('work-user-input').value = '';
+      msg.textContent = 'Added.'; setTimeout(() => msg.textContent = '', 2000);
+    } catch (e) { msg.className = 'settings-msg settings-err'; msg.textContent = e.message; }
+  }
+
+  async function removeWorkUser(entry) {
+    const msg = document.getElementById('work-msg');
+    try {
+      const d = await aFetch('PATCH', '/admin/settings', { removeWorkUser: entry });
+      workAllowlist = d.settings?.workAllowlist || [];
+      renderWorkAllowlist();
+    } catch (e) { msg.className = 'settings-msg settings-err'; msg.textContent = e.message; }
   }
 
   async function saveAppName() {
@@ -356,7 +468,6 @@
     try {
       await aFetch('PATCH', '/admin/settings', { appName: val });
       msg.textContent = 'Saved.';
-      // update topbar branding
       document.getElementById('topbar-logo').textContent = val;
       setTimeout(() => msg.textContent = '', 2500);
     } catch (e) {
@@ -367,6 +478,9 @@
 
   document.getElementById('app-name-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') saveAppName();
+  });
+  document.getElementById('work-user-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addWorkUser();
   });
 
   // ── UTILS ──

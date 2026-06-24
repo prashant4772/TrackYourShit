@@ -21,7 +21,7 @@ function loadDB() {
   try {
     if (fs.existsSync(DB_PATH)) return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
   } catch {}
-  return { users: [], sessions: [], subscriptions: [], connections: [] };
+  return { users: [], sessions: [], subscriptions: [], connections: [], stalks: [] };
 }
 function saveDB(db) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db), 'utf8');
@@ -29,6 +29,7 @@ function saveDB(db) {
 const q = {
   userByEmail: (db, email) => db.users.find(u => u.email === email),
   userById: (db, id) => db.users.find(u => u.id === id),
+  userByUsername: (db, username) => db.users.find(u => u.username === username),
   sessionsByUser: (db, userId) => db.sessions.filter(s => s.userId === userId),
   openSession: (db, userId) => db.sessions.find(s => s.userId === userId && !s.endedAt),
   sessionById: (db, id, userId) => db.sessions.find(s => s.id === id && s.userId === userId),
@@ -105,6 +106,20 @@ function uid() {
 function dayKey(ts) {
   return new Date(ts).toISOString().slice(0, 10);
 }
+function isWorkEnabled(db, user) {
+  const list = db.settings?.workAllowlist || [];
+  return list.includes(user.email) || list.includes(user.id);
+}
+
+function validateUsername(username) {
+  if (typeof username !== 'string') return 'username must be a string';
+  const u = username.trim().toLowerCase();
+  if (u.length < 3) return 'username must be at least 3 characters';
+  if (u.length > 20) return 'username must be 20 characters or fewer';
+  if (!/^[a-z][a-z0-9_]*$/.test(u)) return 'username must start with a letter and contain only letters, numbers, and underscores';
+  return null;
+}
+
 function sanitizeTags(raw) {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -158,7 +173,7 @@ app.get('/events', (req, res) => {
 const authLimiter = rateLimit(15 * 60 * 1000, 10);
 
 app.post('/auth/signup', authLimiter, (req, res) => {
-  const { name, email, password, goalSecs } = req.body;
+  const { name, email, password, goalSecs, username } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'name, email and password required' });
   if (typeof name !== 'string' || name.trim().length === 0) return res.status(400).json({ error: 'invalid name' });
   if (name.trim().length > MAX_NAME) return res.status(400).json({ error: `name must be ${MAX_NAME} characters or fewer` });
@@ -169,17 +184,27 @@ app.post('/auth/signup', authLimiter, (req, res) => {
   const db = loadDB();
   if (q.userByEmail(db, email.toLowerCase())) return res.status(409).json({ error: 'email already in use' });
 
+  let cleanUsername = null;
+  if (username) {
+    const uErr = validateUsername(username);
+    if (uErr) return res.status(400).json({ error: uErr });
+    cleanUsername = username.trim().toLowerCase();
+    if (q.userByUsername(db, cleanUsername)) return res.status(409).json({ error: 'username already taken' });
+  }
+
   const user = {
     id: uid(),
     name: name.trim().slice(0, MAX_NAME),
     email: email.toLowerCase().trim().slice(0, 254),
+    username: cleanUsername,
     passHash: hashPass(password),
     goalSecs: typeof goalSecs === 'number' && goalSecs > 0 ? goalSecs : 18000,
     createdAt: Date.now()
   };
   db.users.push(user);
   saveDB(db);
-  res.json({ token: makeToken(user.id), user: { id: user.id, name: user.name, email: user.email, goalSecs: user.goalSecs } });
+  const workEnabled = isWorkEnabled(db, user);
+  res.json({ token: makeToken(user.id), user: { id: user.id, name: user.name, email: user.email, username: user.username, goalSecs: user.goalSecs, workEnabled } });
 });
 
 app.post('/auth/login', authLimiter, (req, res) => {
@@ -189,18 +214,20 @@ app.post('/auth/login', authLimiter, (req, res) => {
   const db = loadDB();
   const user = q.userByEmail(db, email.toLowerCase().trim());
   if (!user || user.passHash !== hashPass(password)) return res.status(401).json({ error: 'incorrect email or password' });
-  res.json({ token: makeToken(user.id), user: { id: user.id, name: user.name, email: user.email, goalSecs: user.goalSecs } });
+  const workEnabled = isWorkEnabled(db, user);
+  res.json({ token: makeToken(user.id), user: { id: user.id, name: user.name, email: user.email, username: user.username || null, goalSecs: user.goalSecs, workEnabled } });
 });
 
 app.get('/auth/me', requireAuth, (req, res) => {
   const db = loadDB();
   const user = q.userById(db, req.userId);
   if (!user) return res.status(404).json({ error: 'user not found' });
-  res.json({ id: user.id, name: user.name, email: user.email, goalSecs: user.goalSecs });
+  const workEnabled = isWorkEnabled(db, user);
+  res.json({ id: user.id, name: user.name, email: user.email, username: user.username || null, goalSecs: user.goalSecs, workEnabled });
 });
 
 app.patch('/auth/me', requireAuth, (req, res) => {
-  const { name, goalSecs } = req.body;
+  const { name, goalSecs, username } = req.body;
   const db = loadDB();
   const user = q.userById(db, req.userId);
   if (!user) return res.status(404).json({ error: 'user not found' });
@@ -214,8 +241,21 @@ app.patch('/auth/me', requireAuth, (req, res) => {
     if (typeof goalSecs !== 'number' || goalSecs <= 0) return res.status(400).json({ error: 'goalSecs must be a positive number' });
     user.goalSecs = goalSecs;
   }
+  if (username !== undefined) {
+    if (username === null || username === '') {
+      user.username = null;
+    } else {
+      const uErr = validateUsername(username);
+      if (uErr) return res.status(400).json({ error: uErr });
+      const clean = username.trim().toLowerCase();
+      const existing = q.userByUsername(db, clean);
+      if (existing && existing.id !== req.userId) return res.status(409).json({ error: 'username already taken' });
+      user.username = clean;
+    }
+  }
   saveDB(db);
-  res.json({ id: user.id, name: user.name, email: user.email, goalSecs: user.goalSecs });
+  const workEnabled = isWorkEnabled(db, user);
+  res.json({ id: user.id, name: user.name, email: user.email, username: user.username || null, goalSecs: user.goalSecs, workEnabled });
 });
 
 app.post('/auth/password', requireAuth, rateLimit(60 * 60 * 1000, 5), (req, res) => {
@@ -286,11 +326,11 @@ app.post('/sessions/end', requireAuth, (req, res) => {
   const now = Date.now();
   const durationSecs = Math.floor((now - session.startedAt) / 1000);
 
-  if (durationSecs < 30) {
+  if (durationSecs < 60) {
     db.sessions = db.sessions.filter(s => s.id !== sessionId);
     saveDB(db);
     pushToUser(req.userId, 'session:discard', { sessionId });
-    return res.json({ discarded: true, reason: 'session too short' });
+    return res.json({ discarded: true, reason: 'session too short (minimum 1 minute)' });
   }
 
   session.endedAt = now;
@@ -309,7 +349,7 @@ app.post('/sessions/log', requireAuth, (req, res) => {
   if (endedAt <= startedAt) return res.status(400).json({ error: 'endedAt must be after startedAt' });
 
   const durationSecs = Math.floor((endedAt - startedAt) / 1000);
-  if (durationSecs < 30) return res.status(400).json({ error: 'session must be at least 30 seconds' });
+  if (durationSecs < 60) return res.status(400).json({ error: 'session must be at least 1 minute' });
   if (durationSecs > 86400) return res.status(400).json({ error: 'session cannot exceed 24 hours' });
 
   const type = ['study', 'work'].includes(req.body.type) ? req.body.type : 'study';
@@ -421,6 +461,31 @@ app.get('/sessions/stats', requireAuth, (req, res) => {
   const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([tag, count]) => ({ tag, count }));
 
   res.json({ streak, weekTotal, avgSession: avg, totalSessions: all.length, topTags });
+});
+
+app.get('/sessions/heatmap', requireAuth, (req, res) => {
+  const days = Math.min(400, Math.max(28, parseInt(req.query.days) || 365));
+  const typeFilter = ['study', 'work'].includes(req.query.type) ? req.query.type : null;
+  const db = loadDB();
+  let all = q.sessionsByUser(db, req.userId).filter(s => s.endedAt);
+  if (typeFilter) all = all.filter(s => (s.type || 'study') === typeFilter);
+
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  all = all.filter(s => s.startedAt >= since);
+
+  const map = {};
+  for (const s of all) {
+    const k = dayKey(s.startedAt);
+    map[k] = (map[k] || 0) + s.durationSecs;
+  }
+
+  const result = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = d.toISOString().slice(0, 10);
+    result.push({ date: k, totalSecs: map[k] || 0 });
+  }
+  res.json({ days: result });
 });
 
 app.get('/sessions/export.csv', requireAuth, (req, res) => {
@@ -594,7 +659,7 @@ function fmtConnection(db, c, perspectiveUserId) {
   const other = q.userById(db, otherId);
   // nickname is always from the perspective of perspectiveUserId about the OTHER person
   const nickname = c.viewerId === perspectiveUserId ? (c.viewerNickname || null) : (c.sharerNickname || null);
-  return { id: c.id, status: c.status, createdAt: c.createdAt, nickname, user: other ? { id: other.id, name: other.name, email: other.email } : null };
+  return { id: c.id, status: c.status, createdAt: c.createdAt, nickname, user: other ? { id: other.id, name: other.name, email: other.email, username: other.username || null } : null };
 }
 
 // Share MY data with someone → they must accept to see me
@@ -801,6 +866,7 @@ app.get('/admin/users', (req, res) => {
       id: u.id,
       name: u.name,
       email: u.email,
+      username: u.username || null,
       createdAt: u.createdAt || null,
       sessions: completed.length,
       totalHours: Math.round(totalSecs / 3600 * 10) / 10,
@@ -835,21 +901,62 @@ app.delete('/admin/users/:id', (req, res) => {
 app.get('/admin/settings', (req, res) => {
   if (!checkAdminPassword(req, res)) return;
   const db = loadDB();
-  res.json({ settings: db.settings || {} });
+  const settings = db.settings || {};
+  if (!settings.workAllowlist) settings.workAllowlist = [];
+  res.json({ settings });
 });
 
 app.patch('/admin/settings', (req, res) => {
   if (!checkAdminPassword(req, res)) return;
   const db = loadDB();
   if (!db.settings) db.settings = {};
-  const { appName } = req.body;
+  const { appName, addWorkUser, removeWorkUser } = req.body;
   if (appName !== undefined) {
     if (typeof appName !== 'string' || !appName.trim()) return res.status(400).json({ error: 'App name cannot be empty.' });
     if (appName.trim().length > 32) return res.status(400).json({ error: 'App name too long (max 32 chars).' });
     db.settings.appName = appName.trim();
   }
+  if (!db.settings.workAllowlist) db.settings.workAllowlist = [];
+  if (addWorkUser) {
+    const entry = String(addWorkUser).toLowerCase().trim();
+    if (entry && !db.settings.workAllowlist.includes(entry)) db.settings.workAllowlist.push(entry);
+  }
+  if (removeWorkUser) {
+    const entry = String(removeWorkUser).toLowerCase().trim();
+    db.settings.workAllowlist = db.settings.workAllowlist.filter(e => e !== entry);
+  }
   saveDB(db);
   res.json({ settings: db.settings });
+});
+
+app.patch('/admin/users/:id', (req, res) => {
+  if (!checkAdminPassword(req, res)) return;
+  const db = loadDB();
+  const user = q.userById(db, req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+  const { name, username, goalSecs } = req.body;
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'name cannot be empty' });
+    user.name = name.trim().slice(0, MAX_NAME);
+  }
+  if (username !== undefined) {
+    if (username === null || username === '') {
+      user.username = null;
+    } else {
+      const uErr = validateUsername(username);
+      if (uErr) return res.status(400).json({ error: uErr });
+      const clean = username.trim().toLowerCase();
+      const existing = q.userByUsername(db, clean);
+      if (existing && existing.id !== req.params.id) return res.status(409).json({ error: 'username already taken' });
+      user.username = clean;
+    }
+  }
+  if (goalSecs !== undefined) {
+    if (typeof goalSecs !== 'number' || goalSecs <= 0) return res.status(400).json({ error: 'goalSecs must be positive' });
+    user.goalSecs = goalSecs;
+  }
+  saveDB(db);
+  res.json({ id: user.id, name: user.name, email: user.email, username: user.username || null, goalSecs: user.goalSecs });
 });
 
 // ── PUBLIC CONFIG ──
@@ -858,19 +965,114 @@ app.get('/config', (_req, res) => {
   res.json({ appName: db.settings?.appName || 'tracl' });
 });
 
-// Live status of people whose data I can view
+// Lookup a user by email or username (for stalk/invite)
+app.get('/social/lookup', requireAuth, socialLimiter, (req, res) => {
+  const q2 = (req.query.q || '').trim().toLowerCase();
+  if (!q2) return res.status(400).json({ error: 'q parameter required' });
+  const db = loadDB();
+  const user = q.userByEmail(db, q2) || q.userByUsername(db, q2);
+  if (!user) return res.status(404).json({ error: 'no user found' });
+  if (user.id === req.userId) return res.status(400).json({ error: 'cannot look up yourself' });
+  res.json({ id: user.id, name: user.name, username: user.username || null, email: user.email });
+});
+
+// Stalk a user (limited view — live status + today total, no consent needed)
+app.post('/social/stalk', requireAuth, socialLimiter, (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const db = loadDB();
+  const target = q.userById(db, userId);
+  if (!target) return res.status(404).json({ error: 'user not found' });
+  if (target.id === req.userId) return res.status(400).json({ error: 'cannot stalk yourself' });
+  if (!db.stalks) db.stalks = [];
+  const existing = db.stalks.find(s => s.stalkerId === req.userId && s.stalkeeId === userId);
+  if (existing) return res.status(409).json({ error: 'already stalking this user' });
+  db.stalks.push({ id: uid(), stalkerId: req.userId, stalkeeId: userId, createdAt: Date.now() });
+  saveDB(db);
+  res.status(201).json({ ok: true });
+});
+
+app.delete('/social/stalk/:userId', requireAuth, (req, res) => {
+  const db = loadDB();
+  const before = (db.stalks || []).length;
+  db.stalks = (db.stalks || []).filter(s => !(s.stalkerId === req.userId && s.stalkeeId === req.params.userId));
+  if (db.stalks.length === before) return res.status(404).json({ error: 'stalk not found' });
+  saveDB(db);
+  res.json({ ok: true });
+});
+
+app.get('/social/stalks', requireAuth, (req, res) => {
+  const db = loadDB();
+  const today = dayKey(Date.now());
+  const stalks = (db.stalks || []).filter(s => s.stalkerId === req.userId).map(s => {
+    const user = q.userById(db, s.stalkeeId);
+    if (!user) return null;
+    const open = q.openSession(db, s.stalkeeId);
+    const todaySecs = q.sessionsByUser(db, s.stalkeeId)
+      .filter(sess => sess.endedAt && dayKey(sess.startedAt) === today)
+      .reduce((a, sess) => a + sess.durationSecs, 0);
+    return {
+      userId: s.stalkeeId,
+      name: user.name,
+      username: user.username || null,
+      email: user.email,
+      isLive: !!open,
+      liveType: open?.type || null,
+      startedAt: open?.startedAt || null,
+      todaySecs,
+      stalkId: s.id
+    };
+  }).filter(Boolean);
+  res.json({ stalks });
+});
+
+// Limited public profile (for stalk view)
+app.get('/social/users/:userId/public', requireAuth, (req, res) => {
+  const { userId } = req.params;
+  const db = loadDB();
+  const isStalk = (db.stalks || []).some(s => s.stalkerId === req.userId && s.stalkeeId === userId);
+  const isFollowing = canView(db, req.userId, userId);
+  if (!isStalk && !isFollowing) return res.status(403).json({ error: 'not following or stalking this user' });
+  const user = q.userById(db, userId);
+  if (!user) return res.status(404).json({ error: 'user not found' });
+  const today = dayKey(Date.now());
+  const open = q.openSession(db, userId);
+  const todaySecs = q.sessionsByUser(db, userId)
+    .filter(s => s.endedAt && dayKey(s.startedAt) === today)
+    .reduce((a, s) => a + s.durationSecs, 0);
+  res.json({ id: user.id, name: user.name, username: user.username || null, isLive: !!open, liveType: open?.type || null, startedAt: open?.startedAt || null, todaySecs });
+});
+
+// Live status of people whose data I can view OR who I stalk
 app.get('/social/live', requireAuth, (req, res) => {
   const db = loadDB();
-  const live = (db.connections || [])
+  const today = dayKey(Date.now());
+
+  const fromConnections = (db.connections || [])
     .filter(c => c.viewerId === req.userId && c.status === 'accepted')
     .map(c => {
       const open = q.openSession(db, c.sharerId);
-      if (!open) return null;
       const user = q.userById(db, c.sharerId);
-      return { userId: c.sharerId, name: user?.name || 'Unknown', nickname: c.viewerNickname || null, type: open.type || 'study', startedAt: open.startedAt };
-    })
-    .filter(Boolean);
-  res.json({ live });
+      const todaySecs = q.sessionsByUser(db, c.sharerId)
+        .filter(s => s.endedAt && dayKey(s.startedAt) === today)
+        .reduce((a, s) => a + s.durationSecs, 0);
+      return { userId: c.sharerId, name: user?.name || 'Unknown', username: user?.username || null, nickname: c.viewerNickname || null, type: open?.type || 'study', startedAt: open?.startedAt || null, isLive: !!open, todaySecs, source: 'friend' };
+    });
+
+  const stalkedIds = new Set(fromConnections.map(p => p.userId));
+  const fromStalks = (db.stalks || [])
+    .filter(s => s.stalkerId === req.userId && !stalkedIds.has(s.stalkeeId))
+    .map(s => {
+      const open = q.openSession(db, s.stalkeeId);
+      const user = q.userById(db, s.stalkeeId);
+      const todaySecs = q.sessionsByUser(db, s.stalkeeId)
+        .filter(sess => sess.endedAt && dayKey(sess.startedAt) === today)
+        .reduce((a, sess) => a + sess.durationSecs, 0);
+      return { userId: s.stalkeeId, name: user?.name || 'Unknown', username: user?.username || null, nickname: null, type: open?.type || 'study', startedAt: open?.startedAt || null, isLive: !!open, todaySecs, source: 'stalk' };
+    });
+
+  const all = [...fromConnections, ...fromStalks];
+  res.json({ live: all });
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true, time: Date.now() }));

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="html-root">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -276,10 +276,13 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 @media (prefers-color-scheme:dark){
   #screen-dashboard.work-mode .live-pill{background:#1E2F4F;color:#93C5FD;}
 }
-/* TYPE PILL (history) */
+html[data-theme="dark"] #screen-dashboard.work-mode .live-pill{background:#1E2F4F;color:#93C5FD;}
+/* TYPE PILL (history / sessions) */
 .type-pill{font-size:10px;padding:1px 6px;border-radius:99px;font-weight:500;display:inline-block;}
 .type-pill.work{background:#EFF6FF;color:#2563EB;}
+.type-pill.study{background:var(--purple-light);color:var(--purple);}
 @media (prefers-color-scheme:dark){.type-pill.work{background:#1E2F4F;color:#93C5FD;}}
+html[data-theme="dark"] .type-pill.work{background:#1E2F4F;color:#93C5FD;}
 /* HISTORY TYPE FILTER */
 .type-filter{display:flex;background:var(--surface);border:.5px solid var(--border);border-radius:99px;padding:3px;margin-bottom:.75rem;}
 .type-btn{flex:1;padding:6px 0;border:none;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text-2);background:transparent;transition:all .15s;}
@@ -316,6 +319,8 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 .pa-view{background:transparent;border:.5px solid var(--border-mid);color:var(--text-2);}
 .pa-remove{background:transparent;border:.5px solid rgba(192,57,43,.3);color:var(--red);}
 .pa-cancel{background:transparent;border:.5px solid var(--border-mid);color:var(--text-3);}
+.pa-stalk{background:transparent;border:.5px solid var(--border-mid);color:var(--text-2);}
+.pa-unstalk{background:transparent;border:.5px solid rgba(192,57,43,.3);color:var(--red);}
 .invite-row{padding:12px 14px;}
 .invite-input-wrap{display:flex;gap:8px;margin-bottom:0}
 .invite-input{flex:1;padding:9px 12px;background:var(--bg);border:.5px solid var(--border-mid);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
@@ -332,39 +337,119 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 .ptr-ind.ready svg{transform:rotate(180deg);}
 .ptr-ind.loading svg{animation:ptr-spin .7s linear infinite;}
 @keyframes ptr-spin{to{transform:rotate(360deg)}}
-/* SIDE NAV — desktop only */
-.side-nav{display:none;}
+/* SIDE NAV — hidden, replaced by desktop-topbar */
+.side-nav{display:none!important;}
+/* THEME OVERRIDES (class beats media query) */
+html[data-theme="dark"]{
+  --bg:#111110;--surface:#1C1C1A;
+  --border:rgba(255,255,255,0.08);--border-mid:rgba(255,255,255,0.14);
+  --text:#F0EFE8;--text-2:#9A9A94;--text-3:#5A5A56;
+  --purple-light:#1E1A3F;--green-light:#0F1F05;
+  --red-light:rgba(192,57,43,0.15);
+}
+html[data-theme="light"]{
+  --bg:#F7F6F3;--surface:#FFFFFF;
+  --border:rgba(0,0,0,0.08);--border-mid:rgba(0,0,0,0.14);
+  --text:#1A1A18;--text-2:#6B6B67;--text-3:#A8A8A3;
+  --purple-light:#EEEDFE;--green-light:#EAF3DE;
+  --red-light:rgba(192,57,43,0.08);
+}
+/* DESKTOP TOP NAV */
+.desktop-topbar{display:none;position:fixed;top:0;left:0;right:0;height:52px;z-index:30;background:var(--bg);border-bottom:.5px solid var(--border);padding:0 1.5rem;align-items:center;justify-content:space-between;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.dt-logo{font-size:18px;font-weight:700;color:var(--purple);letter-spacing:-.5px;flex-shrink:0;}
+.dt-center{display:flex;align-items:center;gap:8px;flex:1;justify-content:center;}
+/* Live people horizontal in top bar */
+.dt-live-row{display:flex;align-items:center;gap:6px;background:var(--green-light);color:var(--green);padding:5px 12px;border-radius:99px;font-size:11px;font-weight:500;}
+.dt-live-row-inner{display:flex;align-items:center;gap:6px;}
+.dt-live-person{display:flex;align-items:center;gap:5px;cursor:pointer;padding:2px 4px;border-radius:6px;transition:background .1s;}
+.dt-live-person:hover{background:rgba(0,0,0,.05);}
+.dt-live-avatar{width:20px;height:20px;border-radius:50%;background:var(--green-mid);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.dt-live-avatar.work{background:#2563EB;}
+.dt-live-name{font-size:11px;font-weight:500;}
+.dt-live-dot{width:5px;height:5px;border-radius:50%;background:var(--green-mid);animation:pulse 1.6s ease-in-out infinite;flex-shrink:0;}
+.dt-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.dt-icon-btn{width:34px;height:34px;border-radius:10px;border:none;background:transparent;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:background .15s,color .15s;}
+.dt-icon-btn:hover{background:rgba(83,74,183,.08);color:var(--purple);}
+.dt-icon-btn.active{background:rgba(83,74,183,.12);color:var(--purple);}
+.dt-icon-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.dt-icon-btn .bnav-badge{right:2px;top:2px;}
+/* Avatar & dropdown */
+.dt-avatar-wrap{position:relative;}
+.dt-avatar{width:30px;height:30px;border-radius:50%;background:var(--purple-light);color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:inherit;flex-shrink:0;}
+.avatar-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:.5px solid var(--border);border-radius:12px;min-width:160px;padding:4px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.12);}
+.avatar-dropdown button{display:block;width:100%;padding:9px 12px;background:none;border:none;color:var(--text);font-size:13px;font-family:inherit;text-align:left;cursor:pointer;border-radius:8px;transition:background .1s;}
+.avatar-dropdown button:hover{background:var(--bg);}
+.avatar-dropdown .dd-divider{height:.5px;background:var(--border);margin:4px 0;}
+.dd-theme-row{display:flex;align-items:center;gap:6px;padding:6px 12px;}
+.dd-theme-label{font-size:12px;color:var(--text-2);flex:1;}
+.dd-theme-btn{padding:3px 8px;font-size:11px;font-weight:500;border-radius:6px;border:.5px solid var(--border-mid);background:transparent;color:var(--text-2);cursor:pointer;font-family:inherit;}
+.dd-theme-btn.on{background:var(--purple);color:#fff;border-color:var(--purple);}
 @media(min-width:769px){
+  .desktop-topbar{display:flex;}
   .bottom-nav{display:none!important;}
-  .app-body{padding-bottom:2rem!important;}
-  .screen{margin-left:80px;width:calc(100vw - 80px);}
-  .side-nav{
-    display:flex;flex-direction:column;align-items:center;
-    position:fixed;left:0;top:0;bottom:0;width:80px;z-index:30;
-    padding:1.5rem 0 2rem;gap:2px;
-    background:rgba(247,246,243,0.78);
-    backdrop-filter:blur(24px) saturate(180%);
-    -webkit-backdrop-filter:blur(24px) saturate(180%);
-    border-right:.5px solid rgba(0,0,0,0.09);
-    box-shadow:2px 0 32px rgba(0,0,0,0.06);
-  }
-  .side-nav.sn-hidden{display:none!important;}
-  .sn-logo{font-size:15px;font-weight:700;color:var(--purple);letter-spacing:-.5px;margin-bottom:1.25rem;}
-  .side-nav .bnav-tab{width:56px;height:54px;border-radius:14px;padding:0;transition:background .15s,color .15s;}
-  .side-nav .bnav-tab:hover{background:rgba(83,74,183,.07);color:var(--text);}
-  .side-nav .bnav-tab.active{background:rgba(83,74,183,.13);color:var(--purple);}
+  .app-body{padding-bottom:2rem!important;padding-top:.5rem;}
+  .screen{padding-top:52px;}
+  .app-nav{display:none!important;}
 }
-@media(min-width:769px) and (prefers-color-scheme:dark){
-  .side-nav{
-    background:rgba(17,17,16,0.82);
-    border-right:.5px solid rgba(255,255,255,0.07);
-    box-shadow:2px 0 32px rgba(0,0,0,0.35);
-  }
-  .side-nav .bnav-tab.active{background:rgba(175,169,236,0.15);}
-}
+/* HEATMAP */
+.heatmap-wrap{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:1rem;}
+.heatmap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.heatmap-label{font-size:11px;color:var(--text-3);font-weight:500;}
+.heatmap-toggle{display:flex;gap:4px;}
+.hm-tog-btn{font-size:11px;padding:3px 8px;border-radius:99px;border:.5px solid var(--border-mid);background:transparent;color:var(--text-2);cursor:pointer;font-family:inherit;transition:all .15s;}
+.hm-tog-btn.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+.heatmap-grid{display:flex;gap:2px;overflow-x:auto;}
+.hm-week{display:flex;flex-direction:column;gap:2px;}
+.hm-cell{width:11px;height:11px;border-radius:2px;background:var(--border);flex-shrink:0;cursor:pointer;transition:opacity .1s;}
+.hm-cell:hover{opacity:.75;outline:1.5px solid var(--purple);}
+.hm-cell.l1{background:rgba(83,74,183,.2);}
+.hm-cell.l2{background:rgba(83,74,183,.45);}
+.hm-cell.l3{background:rgba(83,74,183,.7);}
+.hm-cell.l4{background:var(--purple);}
+.hm-month-labels{display:flex;gap:2px;margin-bottom:2px;overflow-x:auto;}
+.hm-month-lbl{font-size:9px;color:var(--text-3);min-width:11px;}
+/* STALK RESULT */
+.stalk-result{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:8px;}
+.stalk-live-pill{display:inline-flex;align-items:center;gap:4px;background:var(--green-light);color:var(--green);font-size:10px;font-weight:500;padding:2px 7px;border-radius:99px;}
+.stalk-live-dot{width:5px;height:5px;border-radius:50%;background:var(--green-mid);animation:pulse 1.6s ease-in-out infinite;}
 </style>
 </head>
 <body>
+
+<!-- DESKTOP TOP NAV (≥769px) -->
+<nav class="desktop-topbar" id="desktop-topbar" style="display:none">
+  <span class="dt-logo" id="dt-logo">tracl</span>
+  <div class="dt-center" id="dt-live-container" style="display:none">
+    <div class="dt-live-row">
+      <div class="dt-live-dot"></div>
+      <div class="dt-live-row-inner" id="dt-live-inner"></div>
+    </div>
+  </div>
+  <div class="dt-right">
+    <button class="dt-icon-btn" id="dt-btn-history" onclick="switchTab('history')" title="History">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    </button>
+    <button class="dt-icon-btn" id="dt-btn-people" onclick="switchTab('people')" title="People" style="position:relative">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="bnav-badge people-badge" style="right:2px;top:2px"></span>
+    </button>
+    <div class="dt-avatar-wrap">
+      <button class="dt-avatar" id="dt-avatar" onclick="toggleAvatarDropdown()">—</button>
+      <div class="avatar-dropdown" id="avatar-dropdown" style="display:none">
+        <button onclick="switchTab('settings');closeAvatarDropdown()">Settings</button>
+        <div class="dd-divider"></div>
+        <div class="dd-theme-row">
+          <span class="dd-theme-label">Theme</span>
+          <button class="dd-theme-btn" data-light onclick="setTheme('light')">Light</button>
+          <button class="dd-theme-btn" data-dark onclick="setTheme('dark')">Dark</button>
+          <button class="dd-theme-btn" data-auto onclick="setTheme('')">Auto</button>
+        </div>
+        <div class="dd-divider"></div>
+        <button onclick="handleLogout()" style="color:var(--text-2)">Sign out</button>
+      </div>
+    </div>
+  </div>
+</nav>
 
 <div class="loading-overlay" id="loading"><div class="loading-logo">tracl</div></div>
 <div class="toast" id="toast"></div>
@@ -438,6 +523,7 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
       <div class="auth-sub">takes 10 seconds</div>
       <div class="api-error" id="su-err"></div>
       <div class="field"><label>your name</label><input id="su-name" type="text" placeholder="Arjun" autocomplete="given-name"><div class="field-error" id="err-su-name">please enter your name</div></div>
+      <div class="field"><label>username <span style="color:var(--text-3);font-weight:400">(optional · letters, numbers, _)</span></label><input id="su-username" type="text" placeholder="arjun_studies" autocomplete="username" autocapitalize="none"><div class="field-error" id="err-su-username">3–20 chars, start with a letter</div></div>
       <div class="field"><label>email</label><input id="su-email" type="email" placeholder="arjun@example.com" autocomplete="email"><div class="field-error" id="err-su-email">please enter a valid email</div></div>
       <div class="field"><label>password</label><input id="su-pass" type="password" placeholder="at least 6 characters" autocomplete="new-password"><div class="field-error" id="err-su-pass">password must be at least 6 characters</div></div>
       <div class="field" style="margin-bottom:1.25rem"><label>daily goal <span style="color:var(--text-3);font-weight:400">(e.g. 5h or 5h 30m)</span></label><input id="su-goal" type="text" placeholder="5h 00m"></div>
@@ -523,10 +609,21 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
       <div class="sl">this week</div>
       <div class="week-card"><div class="week-bars" id="week-bars"></div></div>
       <div id="streak-section" style="display:none"><div class="sl">streak</div><div class="streak-row" id="streak-dots"></div></div>
+      <div class="heatmap-wrap">
+        <div class="heatmap-header">
+          <span class="heatmap-label">activity</span>
+          <div class="heatmap-toggle">
+            <button class="hm-tog-btn active" id="hm-btn-month" onclick="switchHeatmap('month')">Month</button>
+            <button class="hm-tog-btn" id="hm-btn-year" onclick="switchHeatmap('year')">Year</button>
+          </div>
+        </div>
+        <div class="hm-month-labels" id="hm-month-labels" style="display:none"></div>
+        <div class="heatmap-grid" id="heatmap-grid"></div>
+      </div>
       <div class="sl">today's sessions</div>
       <div class="sessions-card" id="sessions-list"><div class="empty-msg">no sessions yet · tap start when you're ready</div></div>
       <div id="insight-block" style="display:none"><div class="insight-card" id="insight-text"></div></div>
-      <div class="app-footer">tracl v1.5 · Jun 2026</div>
+      <div class="app-footer">tracl v1.6 · Jun 2026</div>
     </div>
   </div>
   <nav class="bottom-nav">
@@ -552,8 +649,9 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
 <!-- HISTORY -->
 <div class="screen" id="screen-history">
   <nav class="app-nav">
-    <span class="nav-title">history</span>
+    <span class="nav-title" id="hist-nav-title">history</span>
     <div class="nav-right">
+      <button id="hist-clear-date" onclick="clearHistoryDateFilter()" style="display:none;background:none;border:none;cursor:pointer;font-size:12px;color:var(--purple);font-family:inherit;padding:0;font-weight:500">clear ×</button>
       <button onclick="downloadCSV()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);font-family:inherit;padding:0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         CSV
@@ -565,7 +663,7 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
     <div id="history-list"></div>
     <div class="empty-msg" id="history-empty" style="display:none;padding:3rem 0">no sessions yet</div>
     <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreHistory()">load more</button>
-    <div class="app-footer">tracl v1.5 · Jun 2026</div>
+    <div class="app-footer">tracl v1.6 · Jun 2026</div>
   </div>
   <nav class="bottom-nav">
     <button class="bnav-tab" onclick="switchTab('dashboard')">
@@ -605,6 +703,17 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
           <input class="edit-input" id="edit-name-val" type="text" placeholder="your name">
           <button class="edit-save" onclick="saveName()">save</button>
           <div class="field-msg" id="name-msg"></div>
+        </div>
+        <!-- Username -->
+        <div class="settings-row">
+          <span class="settings-row-label">username</span>
+          <span class="settings-row-val" id="disp-username" style="color:var(--text-3)">not set</span>
+          <button class="settings-row-btn" onclick="toggleEdit('username')">edit</button>
+        </div>
+        <div class="edit-wrap" id="edit-username-wrap">
+          <input class="edit-input" id="edit-username-val" type="text" placeholder="arjun_studies" autocapitalize="none">
+          <button class="edit-save" onclick="saveUsername()">save</button>
+          <div class="field-msg" id="username-msg"></div>
         </div>
         <!-- Goal -->
         <div class="settings-row">
@@ -677,6 +786,14 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
             <option value="total">Total</option>
           </select>
         </div>
+        <div class="toggle-row" style="border-bottom:none">
+          <div><div class="toggle-label">app theme</div><div class="toggle-sub">or use avatar menu on desktop</div></div>
+          <div style="display:flex;gap:4px">
+            <button class="dd-theme-btn" id="dd-theme-light" onclick="setTheme('light')">Light</button>
+            <button class="dd-theme-btn" id="dd-theme-dark" onclick="setTheme('dark')">Dark</button>
+            <button class="dd-theme-btn" id="dd-theme-auto" onclick="setTheme('')">Auto</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -711,7 +828,7 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
         <button class="danger-btn" onclick="openDeleteSheet()">delete account</button>
       </div>
     </div>
-    <div class="app-footer">tracl v1.5 · Jun 2026</div>
+    <div class="app-footer">tracl v1.6 · Jun 2026</div>
   </div>
   <nav class="bottom-nav">
     <button class="bnav-tab" onclick="switchTab('dashboard')">
@@ -738,10 +855,28 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
   <nav class="app-nav"><span class="nav-title">people</span></nav>
   <div class="app-body">
     <div class="settings-section">
+      <div class="settings-label">find people</div>
+      <div class="settings-card">
+        <div class="invite-row">
+          <p style="font-size:12px;color:var(--text-2);margin-bottom:10px">Search by email or @username. <strong>Stalk</strong> = see live status &amp; today's time only. <strong>Add</strong> = send a share invite for full access.</p>
+          <div class="invite-input-wrap">
+            <input id="stalk-search" class="invite-input" type="text" placeholder="email or @username" autocapitalize="none">
+            <button class="invite-btn" onclick="searchUser()">Search</button>
+          </div>
+          <div id="stalk-msg" class="field-msg" style="margin-top:6px"></div>
+          <div id="stalk-result" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div id="people-stalking-section" class="settings-section" style="display:none">
+      <div class="settings-label">stalking — live status &amp; today's time</div>
+      <div class="settings-card" id="people-stalking-list"></div>
+    </div>
+    <div class="settings-section">
       <div class="settings-label">share your data</div>
       <div class="settings-card">
         <div class="invite-row">
-          <p style="font-size:12px;color:var(--text-2);margin-bottom:10px">Enter someone's email to share your study & work stats. They accept and both can then share with each other.</p>
+          <p style="font-size:12px;color:var(--text-2);margin-bottom:10px">Enter someone's email to share your study &amp; work stats. They accept and both can then share with each other.</p>
           <div class="invite-input-wrap">
             <input id="invite-email" class="invite-input" type="email" placeholder="their email address" autocomplete="email">
             <button class="invite-btn" onclick="sendInvite()">Share</button>
@@ -767,7 +902,7 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
       <div class="settings-card" id="people-pending-list"></div>
     </div>
     <div id="people-empty" class="empty-msg" style="padding:2rem 0;display:none">no connections yet</div>
-    <div class="app-footer">tracl v1.5 · Jun 2026</div>
+    <div class="app-footer">tracl v1.6 · Jun 2026</div>
   </div>
   <nav class="bottom-nav">
     <button class="bnav-tab" onclick="switchTab('dashboard')">
@@ -864,19 +999,33 @@ html,body { min-height:100%; background:var(--bg); color:var(--text); font-famil
       <button class="cta-sec" onclick="switchTab('dashboard')">dashboard</button>
       <button class="cta-pri" onclick="handleStartAnother()">start another</button>
     </div>
-    <div class="app-footer">tracl v1.5 · Jun 2026</div>
+    <div class="app-footer">tracl v1.6 · Jun 2026</div>
   </div>
 </div>
 
 <script>
 const API = (window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
 
+// ── THEME ──
+function applyTheme(t){
+  const root=document.getElementById('html-root');
+  if(t==='dark'){root.setAttribute('data-theme','dark');}
+  else if(t==='light'){root.setAttribute('data-theme','light');}
+  else{root.removeAttribute('data-theme');}
+  document.querySelectorAll('.dd-theme-btn').forEach(b=>b.classList.remove('on'));
+  const attr={light:'data-light',dark:'data-dark','':'data-auto'}[t]||'data-auto';
+  document.querySelectorAll(`.dd-theme-btn[${attr}]`).forEach(b=>b.classList.add('on'));
+}
+function setTheme(t){localStorage.setItem('tracl_theme',t);applyTheme(t);}
+(function(){applyTheme(localStorage.getItem('tracl_theme')||'');})();
+
 // ── STATE ──
 let currentUser=null, activeSessionId=null, activeStartedAt=null, activeSessionType='study';
 let todaySessions=[], tickInterval=null, sseSource=null, liveConnInterval=null;
 let currentMode=localStorage.getItem('defaultMode')||'study'; // 'study' | 'work' | 'total'
 let endTags=[];
-let histPage=1, histTotal=0, histTag=null, histSessions=[];
+let histPage=1, histTotal=0, histTag=null, histSessions=[], histDateFilter=null;
+let heatmapMode='month'; // 'month' | 'year'
 const HIST_LIMIT=20;
 
 const TOKEN_KEY='tracl_token';
@@ -920,6 +1069,12 @@ function parseGoalSecs(str){
   return 18000;
 }
 function tagsHtml(tags){return(tags||[]).filter(t=>t!=='study'&&t!=='work').map(t=>`<span class="tag-chip">${t}</span>`).join('');}
+function typePill(type,inTotal){
+  if(!inTotal) return '';
+  if(type==='work') return '<span class="type-pill work">work</span>';
+  return '<span class="type-pill study">study</span>';
+}
+function studyPill(){return '<span class="type-pill study">study</span>';}
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 function hideLoading(){document.getElementById('loading').style.display='none';}
@@ -932,17 +1087,35 @@ function updateSideNav(tab){
   document.querySelectorAll('#side-nav [data-tab]').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.tab===tab);
   });
+  // desktop topbar icon active states
+  ['history','people'].forEach(t=>{
+    const btn=document.getElementById('dt-btn-'+t);
+    if(btn) btn.classList.toggle('active',t===tab);
+  });
 }
+
+// ── DESKTOP TOPBAR ──
+function toggleAvatarDropdown(){
+  const dd=document.getElementById('avatar-dropdown');
+  const open=dd.style.display!=='none';
+  dd.style.display=open?'none':'block';
+  if(!open){
+    setTimeout(()=>document.addEventListener('click',closeAvatarDropdownOutside,{once:true}),0);
+  }
+}
+function closeAvatarDropdown(){document.getElementById('avatar-dropdown').style.display='none';}
+function closeAvatarDropdownOutside(e){if(!e.target.closest('.dt-avatar-wrap'))closeAvatarDropdown();}
 
 function switchTab(tab){
   updateSideNav(tab);
-  if(tab==='dashboard'){renderDashboard();showScreen('screen-dashboard');}
+  if(tab==='dashboard'){renderDashboard();showScreen('screen-dashboard');loadHeatmap();}
   else if(tab==='history'){
-    histTag=null;
+    histTag=null;histDateFilter=null;
     loadHistory(true);showScreen('screen-history');
   }
   else if(tab==='people'){loadPeople();showScreen('screen-people');}
   else if(tab==='settings'){renderSettings();showScreen('screen-settings');}
+  closeAvatarDropdown();
 }
 
 // ── SSE ──
@@ -965,7 +1138,7 @@ function connectSSE(){
   });
   sseSource.addEventListener('session:discard',e=>{
     const d=JSON.parse(e.data);
-    if(activeSessionId===d.sessionId){clearInterval(tickInterval);activeSessionId=null;activeStartedAt=null;activeSessionType='study';renderDashboard();}
+    if(activeSessionId===d.sessionId){clearInterval(tickInterval);activeSessionId=null;activeStartedAt=null;activeSessionType='study';renderDashboard();showToast('session not recorded — minimum 1 minute required');}
   });
   sseSource.onerror=()=>setTimeout(connectSSE,3000);
 }
@@ -973,17 +1146,23 @@ function connectSSE(){
 // ── AUTH ──
 async function handleSignup(){
   const name=document.getElementById('su-name').value.trim();
+  const usernameRaw=document.getElementById('su-username').value.trim();
   const email=document.getElementById('su-email').value.trim();
   const pass=document.getElementById('su-pass').value;
   const goal=document.getElementById('su-goal').value.trim();
   let ok=true;
   const ve=(id,show)=>{document.getElementById(id).classList.toggle('show',show);if(show)ok=false;};
-  ve('err-su-name',!name);ve('err-su-email',!email||!email.includes('@'));ve('err-su-pass',pass.length<6);
+  ve('err-su-name',!name);
+  const usernameVal=usernameRaw||null;
+  if(usernameRaw){const valid=/^[a-zA-Z][a-zA-Z0-9_]{2,19}$/.test(usernameRaw);ve('err-su-username',!valid);}
+  ve('err-su-email',!email||!email.includes('@'));ve('err-su-pass',pass.length<6);
   if(!ok) return;
   document.getElementById('su-err').classList.remove('show');
   document.getElementById('su-btn').disabled=true;
   try{
-    const data=await api('POST','/auth/signup',{name,email,password:pass,goalSecs:parseGoalSecs(goal)});
+    const body={name,email,password:pass,goalSecs:parseGoalSecs(goal)};
+    if(usernameVal) body.username=usernameVal;
+    const data=await api('POST','/auth/signup',body);
     setToken(data.token); await enterApp(data.user);
   }catch(err){const el=document.getElementById('su-err');el.textContent=err.message;el.classList.add('show');}
   finally{document.getElementById('su-btn').disabled=false;}
@@ -1009,7 +1188,7 @@ function handleLogout(){
   clearInterval(tickInterval);
   if(sseSource){sseSource.close();sseSource=null;}
   clearToken();currentUser=null;activeSessionId=null;activeStartedAt=null;
-  document.getElementById('side-nav').classList.add('sn-hidden');
+  document.getElementById('desktop-topbar').style.display='none';
   showScreen('screen-signup');
 }
 
@@ -1048,7 +1227,7 @@ async function confirmEnd(){
     try{
       const data=await api('POST','/sessions/end',{sessionId:sid,note,tags:endTags});
       closeEndSheet();clearInterval(tickInterval);
-      if(data.discarded){activeSessionId=null;activeStartedAt=null;await loadTodaySessions();renderDashboard();return;}
+      if(data.discarded){activeSessionId=null;activeStartedAt=null;await loadTodaySessions();renderDashboard();showToast('session not recorded — minimum 1 minute required');return;}
       await loadTodaySessions();showSummary(data);activeSessionId=null;activeStartedAt=null;
       return;
     }catch(err){
@@ -1123,10 +1302,18 @@ async function handleStartAnother(){switchTab('dashboard');await handleStart('ma
 // ── DASHBOARD ──
 function renderDashboard(){
   if(!currentUser) return;
+  // Work tab visibility
+  const workTab=document.getElementById('mode-tab-work');
+  if(workTab) workTab.style.display=currentUser.workEnabled?'':'none';
+  if(currentMode==='work'&&!currentUser.workEnabled){currentMode='study';updateModeTabs();}
+
   const isWork=currentMode==='work';
   const isTotal=currentMode==='total';
   const goalSecs=currentUser.goalSecs||18000;
   document.getElementById('nav-avatar').textContent=initials(currentUser.name);
+  // sync desktop avatar
+  const dtAv=document.getElementById('dt-avatar');
+  if(dtAv) dtAv.textContent=initials(currentUser.name);
 
   const modeSessions=isTotal?todaySessions:todaySessions.filter(s=>(s.type||'study')===currentMode);
   const todayTotal=modeSessions.reduce((a,s)=>a+s.durationSecs,0);
@@ -1179,8 +1366,8 @@ function renderDashboard(){
     ?`<div class="empty-msg">${emptyMsg}</div>`
     :sorted.map((s,i)=>{
       const tags=tagsHtml(s.tags);
-      const typePill=isTotal&&(s.type||'study')==='work'?'<span class="type-pill work">work</span>':'';
-      return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''} ${typePill||tags?`<div class="sesh-tags">${typePill}${tags}</div>`:''}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
+      const tPill=isTotal?typePill(s.type||'study',true):(s.type==='study'?'<span class="type-pill study">study</span>':s.type==='work'?'<span class="type-pill work">work</span>':'');
+      return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''} ${tPill||tags?`<div class="sesh-tags">${tPill}${tags}</div>`:''}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
     }).join('');
 
   if(modeSessions.length>0&&!isActive){
@@ -1255,21 +1442,50 @@ function startTick(goalSecs,priorSecs){
 
 // ── HISTORY ──
 async function loadHistory(reset){
-  if(reset){histPage=1;histTotal=0;histSessions=[];document.getElementById('history-list').innerHTML='';document.getElementById('history-empty').style.display='none';document.getElementById('load-more-btn').style.display='none';renderTagFilters();}
+  if(reset){
+    histPage=1;histTotal=0;histSessions=[];
+    document.getElementById('history-list').innerHTML='';
+    document.getElementById('history-empty').style.display='none';
+    document.getElementById('load-more-btn').style.display='none';
+    renderTagFilters();
+    // show/hide date filter label
+    const titleEl=document.getElementById('hist-nav-title');
+    const clearBtn=document.getElementById('hist-clear-date');
+    if(titleEl) titleEl.textContent=histDateFilter?fmtDateShort(new Date(histDateFilter+'T12:00:00').getTime()):'history';
+    if(clearBtn) clearBtn.style.display=histDateFilter?'block':'none';
+  }
   try{
     const tagQ=histTag?'&tag='+encodeURIComponent(histTag):'';
-    const data=await api('GET',`/sessions/history?page=${histPage}&limit=${HIST_LIMIT}${tagQ}`);
+    const limitN=histDateFilter?200:HIST_LIMIT;
+    const data=await api('GET',`/sessions/history?page=${histPage}&limit=${limitN}${tagQ}`);
     histTotal=data.total;
-    histSessions=[...histSessions,...(data.sessions||[])];
+    let fetched=data.sessions||[];
+    if(histDateFilter) fetched=fetched.filter(s=>dayKey(s.startedAt)===histDateFilter);
+    histSessions=[...histSessions,...fetched];
     histPage++;
     renderHistoryList();
     renderTagFilters();
-    document.getElementById('load-more-btn').style.display=histSessions.length<histTotal?'block':'none';
+    const canMore=!histDateFilter&&histSessions.length<histTotal;
+    document.getElementById('load-more-btn').style.display=canMore?'block':'none';
     document.getElementById('history-empty').style.display=histSessions.length===0?'block':'none';
   }catch{}
 }
 
+function openHistoryForDate(date){
+  histDateFilter=date;histTag=null;
+  updateSideNav('history');
+  showScreen('screen-history');
+  loadHistory(true);
+}
+
 function loadMoreHistory(){loadHistory(false);}
+
+function clearHistoryDateFilter(){
+  histDateFilter=null;
+  document.getElementById('hist-nav-title').textContent='history';
+  document.getElementById('hist-clear-date').style.display='none';
+  loadHistory(true);
+}
 
 function renderHistoryList(){
   const groups={};
@@ -1281,9 +1497,9 @@ function renderHistoryList(){
     const card=document.createElement('div');card.className='history-card';
     groups[dk].sort((a,b)=>b.startedAt-a.startedAt).forEach(s=>{
       const tags=tagsHtml(s.tags);
-      const workPill=(s.type||'study')==='work'?'<span class="type-pill work">work</span>':'';
+      const sPill=(s.type||'study')==='work'?'<span class="type-pill work">work</span>':'<span class="type-pill study">study</span>';
       const row=document.createElement('div');row.className='history-row';
-      row.innerHTML=`<div class="history-info"><div class="history-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="history-note">${s.note}</div>`:''} ${workPill||tags?`<div class="history-tags">${workPill}${tags}</div>`:''}</div><div class="history-dur">${fmtHM(s.durationSecs)}</div>`;
+      row.innerHTML=`<div class="history-info"><div class="history-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="history-note">${s.note}</div>`:''}<div class="history-tags">${sPill}${tags}</div></div><div class="history-dur">${fmtHM(s.durationSecs)}</div>`;
       card.appendChild(row);
     });
     g.appendChild(card);container.appendChild(g);
@@ -1313,9 +1529,12 @@ async function downloadCSV(){
 function renderSettings(){
   if(!currentUser) return;
   document.getElementById('disp-name').textContent=currentUser.name;
+  const uEl=document.getElementById('disp-username');
+  if(uEl){uEl.textContent=currentUser.username?'@'+currentUser.username:'not set';uEl.style.color=currentUser.username?'var(--text)':'var(--text-3)';}
   document.getElementById('disp-goal').textContent=fmtGoal(currentUser.goalSecs||18000);
   document.getElementById('disp-email').textContent=currentUser.email;
-  document.getElementById('default-mode-select').value=localStorage.getItem('defaultMode')||'study';
+  const sel=document.getElementById('default-mode-select');
+  if(sel) sel.value=localStorage.getItem('defaultMode')||'study';
   loadStats();
   renderNotifSettings();
 }
@@ -1331,14 +1550,14 @@ async function loadStats(){
 }
 
 function toggleEdit(field){
-  const wrapId={name:'edit-name-wrap',goal:'edit-goal-wrap',password:'edit-password-wrap'}[field];
+  const wrapId={name:'edit-name-wrap',username:'edit-username-wrap',goal:'edit-goal-wrap',password:'edit-password-wrap'}[field];
   const wrap=document.getElementById(wrapId);
   const open=wrap.classList.contains('open');
-  // Close all
-  ['edit-name-wrap','edit-goal-wrap','edit-password-wrap'].forEach(id=>document.getElementById(id).classList.remove('open'));
+  ['edit-name-wrap','edit-username-wrap','edit-goal-wrap','edit-password-wrap'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
   if(!open){
     wrap.classList.add('open');
     if(field==='name'){const inp=document.getElementById('edit-name-val');inp.value=currentUser.name;inp.focus();}
+    if(field==='username'){const inp=document.getElementById('edit-username-val');inp.value=currentUser.username||'';inp.focus();}
     if(field==='goal'){const inp=document.getElementById('edit-goal-val');inp.value=fmtGoal(currentUser.goalSecs||18000);inp.focus();}
     if(field==='password') document.getElementById('cur-pw').focus();
   }
@@ -1354,9 +1573,22 @@ async function saveName(){
     currentUser={...currentUser,...u};
     document.getElementById('disp-name').textContent=currentUser.name;
     document.getElementById('nav-avatar').textContent=initials(currentUser.name);
+    const dtAv=document.getElementById('dt-avatar');if(dtAv)dtAv.textContent=initials(currentUser.name);
     document.getElementById('edit-name-wrap').classList.remove('open');
     showToast('name updated');
   }catch(err){fieldMsg('name-msg',err.message,true);}
+}
+
+async function saveUsername(){
+  const val=document.getElementById('edit-username-val').value.trim();
+  try{
+    const u=await api('PATCH','/auth/me',{username:val||null});
+    currentUser={...currentUser,...u};
+    const uEl=document.getElementById('disp-username');
+    if(uEl){uEl.textContent=currentUser.username?'@'+currentUser.username:'not set';uEl.style.color=currentUser.username?'var(--text)':'var(--text-3)';}
+    document.getElementById('edit-username-wrap').classList.remove('open');
+    showToast(currentUser.username?'username set to @'+currentUser.username:'username removed');
+  }catch(err){fieldMsg('username-msg',err.message,true);}
 }
 
 async function saveGoal(){
@@ -1546,9 +1778,81 @@ function updatePeopleBadge(count){
 
 async function loadPeople(){
   try{
-    const data=await api('GET','/social/connections');
+    const [data,stalkData]=await Promise.all([api('GET','/social/connections'),api('GET','/social/stalks').catch(()=>({stalks:[]}))]);
     renderPeople(data);
+    renderStalks(stalkData.stalks||[]);
   }catch(err){showToast(err.message);}
+}
+
+// ── STALK ──
+async function searchUser(){
+  const q=document.getElementById('stalk-search').value.trim().replace(/^@/,'');
+  const msg=document.getElementById('stalk-msg');
+  const resultEl=document.getElementById('stalk-result');
+  msg.className='field-msg';msg.textContent='';resultEl.style.display='none';resultEl.innerHTML='';
+  if(!q){msg.className='field-msg err';msg.textContent='enter an email or @username';return;}
+  try{
+    const d=await api('GET','/social/lookup?q='+encodeURIComponent(q));
+    resultEl.style.display='block';
+    const displayName=d.username?`${d.name} (@${d.username})`:(d.name||'Unknown');
+    resultEl.innerHTML=`<div class="stalk-result"><div class="person-row">
+      <div class="person-avatar">${initials(d.name||'?')}</div>
+      <div class="person-info"><div class="person-name">${displayName}</div><div class="person-sub">${d.email}</div></div>
+      <div class="person-actions">
+        <button class="pa-btn pa-stalk" onclick="doStalk('${d.id}')">Stalk</button>
+        <button class="pa-btn pa-accept" onclick="doAdd('${d.email}')">Add</button>
+      </div>
+    </div></div>`;
+  }catch(err){msg.className='field-msg err';msg.textContent=err.message;}
+}
+
+async function doStalk(userId){
+  try{
+    await api('POST','/social/stalk',{userId});
+    document.getElementById('stalk-result').style.display='none';
+    document.getElementById('stalk-search').value='';
+    showToast('stalking — you can see their live status and today\'s time');
+    await loadPeople();
+  }catch(err){showToast(err.message);}
+}
+
+async function doAdd(email){
+  try{
+    const d=await api('POST','/social/invite',{email});
+    document.getElementById('stalk-result').style.display='none';
+    document.getElementById('stalk-search').value='';
+    showToast(`invite sent to ${d.targetName||email}`);
+    await loadPeople();
+  }catch(err){showToast(err.message);}
+}
+
+async function unstalkUser(userId){
+  try{
+    await api('DELETE','/social/stalk/'+userId);
+    showToast('unfollowed');
+    await loadPeople();
+  }catch(err){showToast(err.message);}
+}
+
+function renderStalks(stalks){
+  const sec=document.getElementById('people-stalking-section');
+  const list=document.getElementById('people-stalking-list');
+  if(!sec||!list) return;
+  if(!stalks.length){sec.style.display='none';return;}
+  sec.style.display='';
+  list.innerHTML=stalks.map(s=>{
+    const liveHtml=s.isLive?`<span class="stalk-live-pill"><span class="stalk-live-dot"></span>${s.liveType==='work'?'working':'studying'}</span>`:'';
+    const todayHtml=`<span style="font-size:11px;color:var(--text-2)">${fmtHM(s.todaySecs||0)} today</span>`;
+    const dn=s.name||'Unknown';
+    return `<div class="person-row">
+      <div class="person-avatar">${initials(dn)}</div>
+      <div class="person-info">
+        <div class="person-name">${dn}${s.username?' <span style="color:var(--text-3);font-size:12px">@'+s.username+'</span>':''}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">${liveHtml}${todayHtml}</div>
+      </div>
+      <div class="person-actions"><button class="pa-btn pa-unstalk" onclick="unstalkUser('${s.userId}')">Unfollow</button></div>
+    </div>`;
+  }).join('');
 }
 
 function renderPeople(data){
@@ -1714,8 +2018,8 @@ function renderProfileView(d){
   const sessEl=document.getElementById('pv-sessions');
   const sessHtml=d.recent.map((s,i)=>{
     const tags=tagsHtml(s.tags);
-    const workPill=s.type==='work'?'<span class="type-pill work">work</span>':'';
-    return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''} ${workPill||tags?`<div class="sesh-tags">${workPill}${tags}</div>`:''}</div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
+    const pill=s.type==='work'?'<span class="type-pill work">work</span>':'<span class="type-pill study">study</span>';
+    return `<div class="sesh-row"><div class="sesh-dot ${i===0?'latest':''}"></div><div class="sesh-info"><div class="sesh-time">${fmtTime(s.startedAt)} – ${fmtTime(s.endedAt)}</div>${s.note?`<div class="sesh-note">${s.note}</div>`:''}<div class="sesh-tags">${pill}${tags}</div></div><div class="sesh-dur">${fmtHM(s.durationSecs)}</div></div>`;
   }).join('');
   sessEl.innerHTML=sessHtml||'<div class="empty-msg">no sessions yet</div>';
 }
@@ -1738,6 +2042,73 @@ async function saveNickServer(connId){
   }catch(err){showToast(err.message);}
 }
 
+// ── HEATMAP ──
+async function loadHeatmap(){
+  const days=heatmapMode==='year'?365:42;
+  try{
+    const d=await api('GET',`/sessions/heatmap?days=${days}`);
+    renderHeatmap(d.days||[]);
+  }catch{}
+}
+
+function switchHeatmap(mode){
+  heatmapMode=mode;
+  document.getElementById('hm-btn-month').classList.toggle('active',mode==='month');
+  document.getElementById('hm-btn-year').classList.toggle('active',mode==='year');
+  loadHeatmap();
+}
+
+function hmLevel(secs){
+  if(!secs) return '';
+  if(secs<1800) return 'l1';
+  if(secs<7200) return 'l2';
+  if(secs<14400) return 'l3';
+  return 'l4';
+}
+
+function renderHeatmap(days){
+  const grid=document.getElementById('heatmap-grid');
+  const monthLabels=document.getElementById('hm-month-labels');
+  if(!grid) return;
+  grid.innerHTML='';
+
+  if(heatmapMode==='month'){
+    monthLabels.style.display='none';
+    // Show last 42 days as a simple 7-col grid (6 weeks)
+    const cells=days.slice(-42);
+    const week=document.createElement('div');week.className='hm-week';week.style.cssText='display:grid;grid-template-columns:repeat(7,11px);gap:2px;';
+    cells.forEach(d=>{
+      const cell=document.createElement('div');
+      cell.className='hm-cell '+hmLevel(d.totalSecs);
+      cell.title=d.date+(d.totalSecs?' · '+fmtHM(d.totalSecs):'');
+      if(d.totalSecs||d.date===todayKey()) cell.onclick=()=>openHistoryForDate(d.date);
+      week.appendChild(cell);
+    });
+    grid.appendChild(week);
+  } else {
+    // Year view — GitHub-style columns of 7 (weeks)
+    monthLabels.style.display='flex';
+    const weeks=[];
+    for(let i=0;i<days.length;i+=7) weeks.push(days.slice(i,i+7));
+    let lastMonth='';
+    const lbls=[];
+    weeks.forEach(week=>{
+      const col=document.createElement('div');col.className='hm-week';
+      week.forEach(d=>{
+        const cell=document.createElement('div');
+        cell.className='hm-cell '+hmLevel(d.totalSecs);
+        cell.title=d.date+(d.totalSecs?' · '+fmtHM(d.totalSecs):'');
+        if(d.totalSecs||d.date===todayKey()) cell.onclick=()=>openHistoryForDate(d.date);
+        col.appendChild(cell);
+      });
+      grid.appendChild(col);
+      const mo=week[0]?.date.slice(0,7);
+      lbls.push(mo&&mo!==lastMonth?(lastMonth=mo,new Date(week[0].date+'T12:00:00').toLocaleString('en',{month:'short'})):'');
+    });
+    monthLabels.innerHTML=lbls.map(l=>`<div class="hm-month-lbl">${l}</div>`).join('');
+  }
+}
+
 // ── LIVE CONNECTIONS ──
 async function loadLiveConnections(){
   try{
@@ -1747,24 +2118,57 @@ async function loadLiveConnections(){
 }
 
 function renderLiveConnections(live){
+  // Mobile: stacked avatars in top nav
   const wrap=document.getElementById('nav-live-people');
   const avs=document.getElementById('nav-live-avs');
-  if(!live.length){wrap.style.display='none';return;}
-  wrap.style.display='flex';
-  const shown=live.slice(0,3);
-  const extra=live.length-shown.length;
-  avs.innerHTML=shown.map((p,i)=>{
-    const dn=p.nickname||p.name||'?';
-    const modeClass=p.type==='work'?'work':'study';
-    return `<div class="nlav ${modeClass}" style="z-index:${10-i}" title="${dn}" onclick="viewUserProfile('${p.userId}','${(p.name||'').replace(/'/g,"\\'")}','${(p.nickname||'').replace(/'/g,"\\'")}')">${initials(dn)}</div>`;
-  }).join('')+(extra>0?`<div class="nlav more">+${extra}</div>`:'');
+  if(wrap&&avs){
+    const livePeople=live.filter(p=>p.isLive);
+    if(!livePeople.length){wrap.style.display='none';}
+    else{
+      wrap.style.display='flex';
+      const shown=livePeople.slice(0,3),extra=livePeople.length-shown.length;
+      avs.innerHTML=shown.map((p,i)=>{
+        const dn=p.nickname||p.name||'?';
+        const mc=p.type==='work'?'work':'study';
+        return `<div class="nlav ${mc}" style="z-index:${10-i}" title="${dn}" onclick="viewUserProfile('${p.userId}','${(p.name||'').replace(/'/g,"\\'")}','${(p.nickname||'').replace(/'/g,"\\'")}')">${initials(dn)}</div>`;
+      }).join('')+(extra>0?`<div class="nlav more">+${extra}</div>`:'');
+    }
+  }
+
+  // Desktop: horizontal live-row in top bar
+  const dtContainer=document.getElementById('dt-live-container');
+  const dtInner=document.getElementById('dt-live-inner');
+  if(dtContainer&&dtInner){
+    const livePeople=live.filter(p=>p.isLive);
+    if(!livePeople.length){dtContainer.style.display='none';}
+    else{
+      dtContainer.style.display='';
+      dtInner.innerHTML=livePeople.map(p=>{
+        const dn=p.nickname||p.name||'?';
+        const mc=p.type==='work'?'work':'';
+        return `<span class="dt-live-person" onclick="viewUserProfile('${p.userId}','${(p.name||'').replace(/'/g,"\\'")}','${(p.nickname||'').replace(/'/g,"\\'")}')" title="${fmtHM(p.todaySecs||0)} today">
+          <span class="dt-live-avatar ${mc}">${initials(dn)}</span>
+          <span class="dt-live-name">${dn}</span>
+        </span>`;
+      }).join('');
+    }
+  }
 }
 
 // ── BOOT ──
 async function enterApp(user){
   currentUser=user;
+  // Apply default mode — but only use 'work' if enabled
+  const saved=localStorage.getItem('defaultMode')||'study';
+  currentMode=(saved==='work'&&!user.workEnabled)?'study':saved;
   updateModeTabs();
-  document.getElementById('side-nav').classList.remove('sn-hidden');
+  // Show desktop topbar (clear inline display:none so CSS media query takes over)
+  const dtBar=document.getElementById('desktop-topbar');
+  if(dtBar) dtBar.style.removeProperty('display');
+  const dtAv=document.getElementById('dt-avatar');
+  if(dtAv) dtAv.textContent=initials(user.name);
+  // Apply saved theme
+  applyTheme(localStorage.getItem('tracl_theme')||'');
   updateSideNav('dashboard');
   await loadTodaySessions();
   renderDashboard();
@@ -1773,6 +2177,7 @@ async function enterApp(user){
   initNFC();
   registerSW();
   await handleURLAction();
+  loadHeatmap();
   // Background: people badge + live connections
   api('GET','/social/connections').then(d=>{
     const pending=(d.received||[]).filter(c=>c.status==='pending').length;
@@ -1831,7 +2236,7 @@ document.addEventListener('visibilitychange',async()=>{
 async function applyAppName(name){
   if(!name) return;
   document.title=name;
-  document.querySelectorAll('.nav-logo,.sn-logo').forEach(el=>el.textContent=name);
+  document.querySelectorAll('.nav-logo,.sn-logo,.dt-logo').forEach(el=>el.textContent=name);
 }
 
 (async function boot(){
