@@ -1828,7 +1828,14 @@ document.addEventListener('visibilitychange',async()=>{
   });
 })();
 
+async function applyAppName(name){
+  if(!name) return;
+  document.title=name;
+  document.querySelectorAll('.nav-logo,.sn-logo').forEach(el=>el.textContent=name);
+}
+
 (async function boot(){
+  fetch('/config').then(r=>r.json()).then(d=>applyAppName(d.appName)).catch(()=>{});
   const tok=getToken();
   if(tok){try{const user=await api('GET','/auth/me');hideLoading();await enterApp(user);return;}catch{clearToken();}}
   hideLoading();showScreen('screen-signup');

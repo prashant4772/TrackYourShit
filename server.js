@@ -786,6 +786,78 @@ app.get('/admin/stats', (req, res) => {
   });
 });
 
+// ── ADMIN USERS ──
+app.get('/admin/users', (req, res) => {
+  if (!checkAdminPassword(req, res)) return;
+  const db = loadDB();
+  const search = (req.query.q || '').toLowerCase().trim();
+  let users = db.users.map(u => {
+    const sessions = db.sessions.filter(s => s.userId === u.id);
+    const completed = sessions.filter(s => s.endedAt);
+    const totalSecs = completed.reduce((a, s) => a + (s.durationSecs || 0), 0);
+    const lastSession = completed.sort((a, b) => b.endedAt - a.endedAt)[0];
+    const open = sessions.find(s => !s.endedAt);
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      createdAt: u.createdAt || null,
+      sessions: completed.length,
+      totalHours: Math.round(totalSecs / 3600 * 10) / 10,
+      lastActive: lastSession?.endedAt || null,
+      isLive: !!open,
+      liveType: open?.type || null,
+    };
+  });
+  if (search) users = users.filter(u =>
+    u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)
+  );
+  users.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  res.json({ users, total: db.users.length });
+});
+
+app.delete('/admin/users/:id', (req, res) => {
+  if (!checkAdminPassword(req, res)) return;
+  const db = loadDB();
+  const user = q.userById(db, req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+  db.users = db.users.filter(u => u.id !== req.params.id);
+  db.sessions = db.sessions.filter(s => s.userId !== req.params.id);
+  db.subscriptions = (db.subscriptions || []).filter(s => s.userId !== req.params.id);
+  db.connections = (db.connections || []).filter(c => c.sharerId !== req.params.id && c.viewerId !== req.params.id);
+  saveDB(db);
+  pushToUser(req.params.id, 'logout', {});
+  console.log(`[admin] deleted user ${req.params.id} (${user.email})`);
+  res.json({ message: 'User deleted.' });
+});
+
+// ── ADMIN SETTINGS ──
+app.get('/admin/settings', (req, res) => {
+  if (!checkAdminPassword(req, res)) return;
+  const db = loadDB();
+  res.json({ settings: db.settings || {} });
+});
+
+app.patch('/admin/settings', (req, res) => {
+  if (!checkAdminPassword(req, res)) return;
+  const db = loadDB();
+  if (!db.settings) db.settings = {};
+  const { appName } = req.body;
+  if (appName !== undefined) {
+    if (typeof appName !== 'string' || !appName.trim()) return res.status(400).json({ error: 'App name cannot be empty.' });
+    if (appName.trim().length > 32) return res.status(400).json({ error: 'App name too long (max 32 chars).' });
+    db.settings.appName = appName.trim();
+  }
+  saveDB(db);
+  res.json({ settings: db.settings });
+});
+
+// ── PUBLIC CONFIG ──
+app.get('/config', (_req, res) => {
+  const db = loadDB();
+  res.json({ appName: db.settings?.appName || 'tracl' });
+});
+
 // Live status of people whose data I can view
 app.get('/social/live', requireAuth, (req, res) => {
   const db = loadDB();
